@@ -23,17 +23,17 @@ profiling, statistical summaries, and interactive visualization.
 [**RNAmeta-online**](https://rnainformatics.cn/RNAmeta-online/) ·
 [**Contact**](mailto:rwtkc@foxmail.com)
 
-[Main functions](#-main-functions) ·
-[Installation](#-installation) ·
-[Basic workflow](#-basic-workflow) ·
-[Analysis modules](#-analysis-modules) ·
-[Image export](#-image-export)
+[Main functions](#main-functions) ·
+[Installation](#installation) ·
+[Basic workflow](#basic-workflow) ·
+[Analysis modules](#analysis-modules) ·
+[Image export](#image-export)
 
 </div>
 
 ---
 
-<h2 align="center">✨ Main functions</h2>
+## Main functions
 
 <table align="center">
   <thead>
@@ -56,7 +56,7 @@ profiling, statistical summaries, and interactive visualization.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Install from GitHub
 
@@ -73,7 +73,7 @@ remotes::install_github("Rwtkc/RNAmeta_R")
 install.packages("RNAmeta_0.2.0.tar.gz", repos = NULL, type = "source")
 ```
 
-## 🧬 Input files
+## Input files
 
 | Parameter | Input |
 | --- | --- |
@@ -82,7 +82,7 @@ install.packages("RNAmeta_0.2.0.tar.gz", repos = NULL, type = "source")
 | `tx_length_file` | A transcript-length `.rda` file |
 | `gff_file` | A processed GFF `GRanges` `.rda` file |
 
-## 🚀 Basic workflow
+## Basic workflow
 
 ```r
 library(RNAmeta)
@@ -103,7 +103,7 @@ preliminary <- RNAmeta_get_preliminary_analysis_data(
 
 ---
 
-## 📊 Analysis modules
+## Analysis modules
 
 ### Gene Type
 
@@ -194,7 +194,7 @@ RNAmeta_meta_plot_export(meta, "meta_ncrna.pdf", tx_type = "ncRNA")
 
 ---
 
-## 🖼️ Image export
+## Image export
 
 Control PNG and PDF output with `width`, `height`, and `aspect_ratio`. PNG output
 also supports `scale`.
@@ -218,7 +218,7 @@ RNAmeta_peak_distribution_export(
 )
 ```
 
-## ⚡ Cache
+## Cache
 
 Repeated analyses reuse cached annotation and profile results. Clear a selected
 cache or all cached results when input files change:

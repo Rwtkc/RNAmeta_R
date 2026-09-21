@@ -1,67 +1,61 @@
 # RNAmeta
 
-RNAmeta is an R package for annotating genomic intervals, summarizing peak
-features, profiling transcript landmarks, and generating interactive figures
-with headless PNG/PDF export.
+```text
+ ____  _   _    _    __  __      _
+|  _ \| \ | |  / \  |  \/  | ___| |_ __ _
+| |_) |  \| | / _ \ | |\/| |/ _ \ __/ _` |
+|  _ <| |\  |/ ___ \| |  | |  __/ || (_| |
+|_| \_\_| \_/_/   \_\_|  |_|\___|\__\__,_|
+```
 
-- **Online server:** [RNAmeta-online](https://rnainformatics.cn/RNAmeta-online/)
-- **Source code:** [GitHub](https://github.com/Rwtkc/RNAmeta_R)
-- **Contact:** [rwtkc@foxmail.com](mailto:rwtkc@foxmail.com)
+RNAmeta is an R package for genomic interval annotation, transcript-region
+profiling, statistical summaries, and interactive visualization. Figures can be
+viewed interactively or exported as PNG and PDF files.
 
-## Features
+- [RNAmeta-online](https://rnainformatics.cn/RNAmeta-online/)
+- [GitHub repository](https://github.com/Rwtkc/RNAmeta_R)
+- [rwtkc@foxmail.com](mailto:rwtkc@foxmail.com)
 
-- Shared peak annotation and in-memory caching across analysis modules.
-- Preliminary Analysis, Gene Type, and Gene Matrix summaries.
-- Peak distribution, exon type, exon number, exon size, and gene size charts.
-- Transcription, Translation, and Splice Site profiles with independent panels.
-- Meta Plot analysis for transcript, mRNA, and ncRNA regions.
-- Reproducible sampling through explicit random seeds.
-- PNG and PDF export on Windows, macOS, and headless Linux systems.
+## Main functions
 
-Motif discovery, Genome Browser/IGV, and RNA Structure are intentionally outside
-the scope of this R package. These features remain available only where the
-required external services and runtime environments are provided separately.
+| Module | Purpose |
+| --- | --- |
+| Preliminary Analysis | Prepare shared peak annotations for downstream analyses |
+| Gene Type | Summarize peak-associated gene types |
+| Gene Matrix | Compare shared and sample-specific genes across 2–5 samples |
+| Peak Summary | Plot peak distribution, exon type, exon number, exon size, and gene size |
+| Transcription | Profile signals around transcription start and end sites |
+| Translation | Profile signals around translation start and stop sites |
+| Splice Site | Profile signals around donor and acceptor sites |
+| Meta Plot | Display peak distributions across transcript regions |
 
 ## Installation
 
-### From GitHub
+Install the current version from GitHub:
 
 ```r
-if (!requireNamespace("BiocManager", quietly = TRUE)) {
-  install.packages("BiocManager")
-}
 if (!requireNamespace("remotes", quietly = TRUE)) {
   install.packages("remotes")
 }
-
-options(repos = BiocManager::repositories())
 remotes::install_github("Rwtkc/RNAmeta_R")
 ```
 
-### From a source package
+Install a downloaded source package:
 
 ```r
 install.packages("RNAmeta_0.2.0.tar.gz", repos = NULL, type = "source")
 ```
 
-RNAmeta uses Bioconductor annotation infrastructure. On Linux, installation of
-the `rsvg` dependency may additionally require the system package
-`librsvg2-dev` (Debian/Ubuntu) or `librsvg2-devel` (Fedora/RHEL).
+## Input files
 
-## Annotation inputs
+RNAmeta reads BED files and species annotation files supplied by the user:
 
-Species annotation files are supplied by path and loaded only when needed. The
-main workflow accepts:
-
+- `bed_file`: one or more BED files;
 - `txdb_file`: a TxDb object or TxDb SQLite file;
 - `tx_length_file`: a transcript-length `.rda` file;
-- `gff_file`: a processed GFF `GRanges` `.rda` file;
-- `bed_file`: one or more BED paths, or supported `GRanges` objects where
-  documented.
+- `gff_file`: a processed GFF `GRanges` `.rda` file.
 
-Species-specific annotation packages do not need to be installed.
-
-## Quick start
+## Basic workflow
 
 ```r
 library(RNAmeta)
@@ -77,17 +71,10 @@ preliminary <- RNAmeta_get_preliminary_analysis_data(
 )
 ```
 
-The result is a named list shared by downstream modules. Named access is
-recommended; legacy positional access remains supported.
+The `preliminary` object can be reused by Gene Matrix, Peak Summary,
+Transcription, Translation, and Splice Site modules.
 
-```r
-names(preliminary)
-# cct_list, peak_gr_list, gff, peak_gr_for_motifscan, motif_parameter,
-# flanking_size, txdb_features, gene_max_tx_lengths, short_flanking_size,
-# tx_lengths
-```
-
-## Gene Type and Gene Matrix
+## Gene Type
 
 ```r
 gene_type <- RNAmeta_gene_type_data(
@@ -98,18 +85,20 @@ gene_type <- RNAmeta_gene_type_data(
 )
 
 RNAmeta_gene_type_plot(gene_type)
-RNAmeta_gene_type_export(gene_type, "gene_type.png", width = 1600,
-                         aspect_ratio = c(16, 9))
+RNAmeta_gene_type_export(gene_type, "gene_type.png")
+```
 
+## Gene Matrix
+
+```r
 gene_matrix <- RNAmeta_gene_matrix_data(preliminary, labels)
 RNAmeta_get_gene_matrix_plot(gene_matrix)
 RNAmeta_gene_matrix_export(gene_matrix, "gene_matrix.pdf")
 ```
 
-Gene Matrix supports two to five samples and uses the same center-site and
-transcript-to-gene mapping workflow as RNAmeta-online.
+Gene Matrix accepts two to five samples.
 
-## Peak summary charts
+## Peak Summary
 
 ```r
 RNAmeta_peak_distribution_plot(preliminary, labels)
@@ -117,7 +106,11 @@ RNAmeta_peak_exon_type_plot(preliminary, labels)
 RNAmeta_peak_exon_number_plot(preliminary, labels)
 RNAmeta_peak_exon_size_plot(preliminary, labels)
 RNAmeta_peak_gene_size_plot(preliminary, labels)
+```
 
+Export the corresponding plots with:
+
+```r
 RNAmeta_peak_distribution_export(preliminary, "peak_distribution.png", labels)
 RNAmeta_peak_exon_type_export(preliminary, "peak_exon_type.pdf", labels)
 RNAmeta_peak_exon_number_export(preliminary, "peak_exon_number.png", labels)
@@ -127,9 +120,8 @@ RNAmeta_peak_gene_size_export(preliminary, "peak_gene_size.png", labels)
 
 ## Transcription, Translation, and Splice Site
 
-Site-profile functions return a named list of independent figures by default.
-Use `panel` to select one figure. When `panel = "all"`, export functions append
-the panel name to each output filename automatically.
+Each function returns a named list of individual plots. Use `panel` to display or
+export one plot, or keep `panel = "all"` to export all plots.
 
 ```r
 transcription <- get_transcription_data(preliminary, seed = 1)
@@ -164,7 +156,6 @@ meta <- RNAmeta_meta_plot(
   seed = 1
 )
 
-# Multiple transcript types return a named RNAmeta_meta_plots list.
 meta$mRNA
 meta$ncRNA
 
@@ -172,13 +163,10 @@ RNAmeta_meta_plot_export(meta, "meta_mrna.png", tx_type = "mRNA")
 RNAmeta_meta_plot_export(meta, "meta_ncrna.pdf", tx_type = "ncRNA")
 ```
 
-The `seed` controls random site sampling and confidence-interval resampling
-without changing the caller's global random state.
+## Image export
 
-## Export dimensions
-
-All PNG/PDF exporters support explicit dimensions or an aspect ratio. PNG
-export also supports `scale`. Exported figures use a white background.
+PNG and PDF output dimensions can be controlled with `width`, `height`, and
+`aspect_ratio`. PNG output also supports `scale`.
 
 ```r
 RNAmeta_peak_distribution_export(
@@ -199,29 +187,16 @@ RNAmeta_peak_distribution_export(
 )
 ```
 
-Static export is generated through R and `rsvg`; it does not require RStudio
-Viewer, X11, or an active display.
+## Cache
 
-## Cache management
-
-RNAmeta caches annotation bundles, per-sample annotation results, site profiles,
-and Meta Plot calculations in memory.
+Repeated analyses reuse cached annotation and profile results. Clear a selected
+cache or all cached results when input files change:
 
 ```r
 RNAmeta_clear_cache("annotation")
 RNAmeta_clear_cache("site_profile")
 RNAmeta_clear_cache("meta")
 RNAmeta_clear_cache("all")
-
-# Backward-compatible annotation-only function
-RNAmeta_clear_annotation_cache()
-```
-
-Each cache keeps at most 128 entries by default and uses least-recently-used
-eviction. The limit can be changed for the current R session:
-
-```r
-options(RNAmeta.cache.max_entries = 64L)
 ```
 
 ## License

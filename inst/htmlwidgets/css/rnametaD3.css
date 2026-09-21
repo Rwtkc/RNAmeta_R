@@ -1,0 +1,32 @@
+.rnameta-d3-widget {
+  --rm-text: #2f3930;
+  --rm-muted: #6d7569;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  font-family: sans-serif;
+}
+.rnameta-d3-chart {
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(133,155,122,.16);
+  border-radius: 16px;
+  background: rgba(255,252,246,.96);
+  overflow: visible;
+  box-sizing: border-box;
+}
+.rnameta-d3-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rnameta-d3-tooltip {
+  position: absolute; z-index: 5; min-width: 132px; width: max-content;
+  max-width: calc(100vw - 24px); padding: 8px 10px;
+  border: 1px solid rgba(133,155,122,.22); border-radius: 11px;
+  background: rgba(255,252,246,.98); box-shadow: 0 9px 20px rgba(115,98,72,.14);
+  color: var(--rm-text); pointer-events: none; opacity: 0;
+  transition: opacity .12s ease; box-sizing: border-box;
+}
+.rnameta-d3-tooltip[data-visible="true"] { opacity: 1; }
+.rnameta-d3-tooltip__label { margin-bottom: 5px; color: var(--rm-text); font-size: 13px; font-weight: 800; }
+.rnameta-d3-tooltip__row { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; color: var(--rm-muted); font-size: 12px; line-height: 1.35; }
+.rnameta-d3-tooltip__row span,.rnameta-d3-tooltip__row strong { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.rnameta-d3-tooltip__row strong { color: var(--rm-text); font-weight: 700; text-align: right; }
+@media (prefers-reduced-motion: reduce) { .rnameta-d3-tooltip { transition: none; } }

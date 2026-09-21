@@ -2,28 +2,28 @@
 % Please edit documentation in R/RNAmeta_get_splicesite_plot.R
 \name{RNAmeta_get_splicesite_plot}
 \alias{RNAmeta_get_splicesite_plot}
-\title{Plot Distribution of Splicing Sites}
+\title{Plot splice-site profiles}
 \usage{
 RNAmeta_get_splicesite_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  width = NULL,
+  height = NULL,
+  panel = "all"
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing the data necessary for the analysis:
-\itemize{
-\item \link{2} GRanges object containing peak regions (for splicing site analysis)
-\item \link{7} GRanges object with exon annotations (from TxDb or similar)
-\item \link{6} Integer specifying the flank size around splicing sites
-\item \link{9} Integer specifying a short flank size for the analysis
-}}
+\item{preliminary_analysis_data}{Preliminary analysis output or a prepared hit table.}
 
-\item{set_group_name}{A vector of user-defined group names for the samples. This allows the user to reassign the group names for the sample data.
-If this is NULL, no renaming of the groups will be done. The length of the \code{set_group_name} vector should match the number of unique groups in the dataset.}
+\item{set_group_name}{Optional sample labels.}
+
+\item{width, height}{Optional widget dimensions.}
+
+\item{panel}{Panel name/index to display, or "all" to return separate plots for every panel.}
 }
 \value{
-A list of two \code{ggplot2} plots: one for the distribution at the 5' splicing site (5PSS) and one for the distribution at the 3' splicing site (3PSS).
+One selected panel as an htmlwidget, or a named list of separate htmlwidgets when panel is "all".
 }
 \description{
-Plot Distribution of Splicing Sites
+Plot splice-site profiles
 }

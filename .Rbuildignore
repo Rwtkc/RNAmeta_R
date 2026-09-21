@@ -1,3 +1,7 @@
 ^RNAmeta\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^\.Renviron$
+^tools$
+^RNAmeta_test_data$
+^\.gitignore$

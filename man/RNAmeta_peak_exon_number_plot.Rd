@@ -2,21 +2,25 @@
 % Please edit documentation in R/RNAmeta_peak_exon_number_plot.R
 \name{RNAmeta_peak_exon_number_plot}
 \alias{RNAmeta_peak_exon_number_plot}
-\title{RNAmeta_peak_exon_number_plot}
+\title{Plot the exon-count distribution with an interactive boxplot}
 \usage{
 RNAmeta_peak_exon_number_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing exon-related data. The first level of the list contains data for different analyses, and each analysis includes a sublist. The specific data needed is located at the 5th index in each sublist, containing the \code{Sample} and \code{nexon} (number of exons) information.}
+\item{preliminary_analysis_data}{Preliminary analysis output or prepared transcript table.}
 
-\item{set_group_name}{An optional vector of custom group names to replace the original sample names in the data. If \code{NULL}, the original sample names are retained. The length of this vector must match the number of unique sample groups.}
+\item{set_group_name}{Optional replacement sample labels.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A \code{ggplot} object representing a boxplot showing the distribution of the number of exons across different sample groups. The y-axis represents the number of exons, and the boxplots are grouped by \code{Sample}.
+An htmlwidget.
 }
 \description{
-RNAmeta_peak_exon_number_plot
+Plot the exon-count distribution with an interactive boxplot
 }

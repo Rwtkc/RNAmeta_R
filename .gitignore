@@ -1,6 +1,12 @@
-.Rproj.user
+.Rproj.user/
 .Rhistory
-.Rdata
+.RData
+.Ruserdata
+.Renviron
 .httr-oauth
 .DS_Store
-.quarto
+.quarto/
+*.Rcheck/
+*.tar.gz
+RNAmeta_test_data/
+tools/.tmp-*/

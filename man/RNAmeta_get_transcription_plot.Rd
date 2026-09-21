@@ -2,32 +2,31 @@
 % Please edit documentation in R/RNAmeta_get_transcription_plot.R
 \name{RNAmeta_get_transcription_plot}
 \alias{RNAmeta_get_transcription_plot}
-\title{RNAmeta_get_transcription_plot}
+\title{Plot transcription site profiles}
 \usage{
 RNAmeta_get_transcription_plot(
   transcription_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  heatmap_sample = "all",
+  width = NULL,
+  height = NULL,
+  panel = "all"
 )
 }
 \arguments{
-\item{transcription_data}{A list containing two elements:
-\itemize{
-\item The first element is a data frame or data table containing information on transcription coverage (\code{cvg_list}).
-\item The second element is a list with data related to peak heatmap data for the transcriptional regions (i.e., \code{peak_heatmap_data}).
-}}
+\item{transcription_data}{Data returned by get_transcription_data().}
 
-\item{set_group_name}{An optional vector of custom group names to replace the default sample names in the data. The length of this vector must match the number of unique sample groups in the data.
-If \code{NULL}, the function will use the original sample names.}
+\item{set_group_name}{Optional sample labels.}
+
+\item{heatmap_sample}{Sample name/index to display, or "all".}
+
+\item{width, height}{Optional widget dimensions.}
+
+\item{panel}{Panel name/index to display, or "all" to return separate plots for every panel.}
 }
 \value{
-A list of ggplot objects. The list contains the following plots:
-\enumerate{
-\item A density plot of transcription coverage around the transcription start site (TSS).
-\item A density plot of transcription coverage around the transcription end site (TES).
-\item A heatmap of transcription signal for the TSS region.
-\item A heatmap of transcription signal for the TES region.
-}
+One selected panel as an htmlwidget, or a named list of separate htmlwidgets when panel is "all".
 }
 \description{
-RNAmeta_get_transcription_plot
+Plot transcription site profiles
 }

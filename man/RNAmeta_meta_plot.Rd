@@ -28,7 +28,8 @@ RNAmeta_meta_plot(
   site_length_index = 1,
   adjustment_factor = 1,
   confidence_interval_resampling_time = 1000,
-  confidence_interval_range = c(0.025, 0.975)
+  confidence_interval_range = c(0.025, 0.975),
+  seed = 1L
 )
 }
 \arguments{
@@ -156,6 +157,9 @@ Default: 1000}
 \item{confidence_interval_range}{Range for the confidence interval.
 Defines the upper and lower bounds of the confidence interval for the plot.
 Default: c(0.025, 0.975)}
+
+\item{seed}{Non-negative integer controlling random site sampling and
+confidence-interval resampling. The global random state is restored.}
 }
 \value{
 Returns a plot object showing the distribution of genomic features (such as mRNA, ncRNA, or general transcripts)
@@ -163,6 +167,7 @@ based on the sampled points from the provided BED file and transcript annotation
 The plot includes an optional confidence interval curve if specified.
 The plot type and content vary depending on the 'plot_tx_type' parameter and the calculated values
 for each genomic region sampled from the BED file.
+A single transcript type returns one htmlwidget; multiple types return a named RNAmeta_meta_plots list.
 }
 \description{
 Plot genomic feature distributions based on sampled points.

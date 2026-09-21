@@ -1,10 +1,11 @@
-.get_feature_boundary_coverage_new <- function(index = NULL, query_regions = NULL, feature_coords = NULL, flank_size = NULL, boundary_type = NULL,  sample_n = NULL) {
+.get_feature_boundary_coverage_new <- function(index = NULL, query_regions = NULL, feature_coords = NULL, flank_size = NULL, boundary_type = NULL, sample_n = NULL, seed = 1L) {
   if(length(feature_coords) == 0){
     return (data.table::data.table())
   }
   feature_coords = unlist(feature_coords)
   if (sample_n > 0 && sample_n < length(feature_coords)) {
-    feature_coords <- sort(feature_coords[sample(length(feature_coords), sample_n)])
+    sample_index <- .rnameta_with_seed(seed, sample(length(feature_coords), sample_n))
+    feature_coords <- sort(feature_coords[sample_index])
   }
 
   if (boundary_type == 'Transcription_start_site') {
@@ -124,6 +125,8 @@
   flanks_3 <- flanks_3[names(flanks_3) %in% gene_max_tx_lengths$tx_name]
   flanks_5 <- BiocGenerics::unlist(flanks_5)
   flanks_3 <- BiocGenerics::unlist(flanks_3)
+  if (length(flanks_5) > 4000L) flanks_5 <- flanks_5[unique(round(seq(1, length(flanks_5), length.out = 4000L)))]
+  if (length(flanks_3) > 4000L) flanks_3 <- flanks_3[unique(round(seq(1, length(flanks_3), length.out = 4000L)))]
   sm_5 <- suppressWarnings(.score_matrix_RNA(target = qregion,
                                              windows = flanks_5,
                                              strand_aware = TRUE))
@@ -133,4 +136,3 @@
 
   return(.peak_heatmap(tag_matrix_5 = sm_5, tag_matrix_3 = sm_3))
 }
-

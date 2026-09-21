@@ -1,14 +1,26 @@
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage(
-    crayon::green("Welcome to RNAmeta! This package is currently under active development.")
+  logo <- c(
+    " ____  _   _    _    __  __      _        ",
+    "|  _ \\| \\ | |  / \\  |  \\/  | ___| |_ __ _ ",
+    "| |_) |  \\| | / _ \\ | |\\/| |/ _ \\ __/ _` |",
+    "|  _ <| |\\  |/ ___ \\| |  | |  __/ || (_| |",
+    "|_| \\_\\_| \\_/_/   \\_\\_|  |_|\\___|\\__\\__,_|"
   )
-  packageStartupMessage(
-    crayon::yellow("You can visit our interactive online website:\nhttp://rnainformatics.cn:3838/RNAmeta/")
+  online_url <- "https://rnainformatics.cn/RNAmeta-online/"
+  github_url <- "https://github.com/Rwtkc/RNAmeta_R"
+  email <- "rwtkc@foxmail.com"
+
+  message <- c(
+    crayon::green(logo),
+    "",
+    crayon::bold$green(
+      "Welcome to RNAmeta! This package is currently under active development."
+    ),
+    crayon::silver("Genomic region annotation, profiling and visualization"),
+    "",
+    paste0("  ", crayon::bold("Online "), "  ", cli::style_hyperlink(online_url, online_url)),
+    paste0("  ", crayon::bold("GitHub "), "  ", cli::style_hyperlink(github_url, github_url)),
+    paste0("  ", crayon::bold("Contact"), "  ", cli::style_hyperlink(email, paste0("mailto:", email)))
   )
-  packageStartupMessage(
-    crayon::cyan("or visit our GitHub page:\nhttps://github.com/Rwtkc/RNAmeta/tree/master")
-  )
-  packageStartupMessage(
-    crayon::blue("If you have any questions, please contact the developer @Rwtkc: rwtkc@foxmail.com")
-  )
+  packageStartupMessage(paste(message, collapse = "\n"))
 }

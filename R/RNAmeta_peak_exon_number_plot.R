@@ -1,52 +1,41 @@
-#' @title RNAmeta_peak_exon_number_plot
-#' @param preliminary_analysis_data A list containing exon-related data. The first level of the list contains data for different analyses, and each analysis includes a sublist. The specific data needed is located at the 5th index in each sublist, containing the `Sample` and `nexon` (number of exons) information.
-#' @param set_group_name An optional vector of custom group names to replace the original sample names in the data. If `NULL`, the original sample names are retained. The length of this vector must match the number of unique sample groups.
-#' @returns A `ggplot` object representing a boxplot showing the distribution of the number of exons across different sample groups. The y-axis represents the number of exons, and the boxplots are grouped by `Sample`.
-#' @export
-RNAmeta_peak_exon_number_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL){
-  total_all_sites <- NULL
-  for(i in 1:length(preliminary_analysis_data[[1]])){
-    all_sites <- NULL
-    cct <- NULL
-    cct <- preliminary_analysis_data[[1]][[i]]
-    cct7 = cct[5]
-    all_sites = data.table::rbindlist(cct7)
-    all_sites[, group := gsub("_.*", "", Sample)]
-    all_sites[, Sample := gsub(".*_", "", Sample)]
-    data.table::as.data.table(all_sites)
-    total_all_sites <- IRanges::rbind(total_all_sites, all_sites)
-  }
-  all_sites <- total_all_sites
-  if(is.null(set_group_name)){} else {
-    original_group_names <- IRanges::unique(all_sites$Sample)
-    if (length(set_group_name) != length(original_group_names)) {
-      stop(paste("The number of user-defined group names does not match the number of groups in the data.",
-                 "Length of set_group_name:", length(set_group_name),
-                 "Length of original_group_names:", length(original_group_names)))
-    }
-    group_mapping <- stats::setNames(set_group_name, original_group_names)
-    all_sites$Sample <- dplyr::recode(all_sites$Sample, !!!group_mapping)
-  }
+.rnameta_peak_exon_number_table <- function(data, set_group_name = NULL) {
+  result <- .rnameta_preliminary_component(data, 5L, c("Sample", "nexon"))
+  result <- .rnameta_clean_sample_names(result)
+  result[, nexon := suppressWarnings(as.numeric(nexon))]
+  result <- result[is.finite(nexon) & nexon > 0]
+  result <- .rnameta_rename_samples(result, set_group_name)
+  result
+}
 
-  if(length(IRanges::unique(all_sites$Sample)) > 1){
-    legend_position <- "top"
-  } else {
-    legend_position <- "none"
-  }
-  p <- ggpubr::ggboxplot(all_sites, x = 'Sample', y = 'nexon', width = 0.3, color = "Sample") +
-    ggplot2::labs(x = "", y = "Number of exons") +
-    ggplot2::scale_fill_manual(values = c("#c21d2e", "#7ecba4", "#ff6347", "#4682b4", "#32cd32", "#ffd700")) +
-    ggplot2::theme(
-      legend.position = legend_position,
-      legend.title = ggplot2::element_blank(),
-      axis.line.y = ggplot2::element_line(),
-      axis.ticks.y = ggplot2::element_line(),
-      axis.ticks.x = ggplot2::element_blank(),
-      axis.title.x = ggplot2::element_blank(),
-      text = ggplot2::element_text(size = 10, colour = "#333333"),
-      axis.text.y = ggplot2::element_text(vjust = 0.5),
-      axis.text.x = ggplot2::element_text(size = 10, hjust = 0.5, margin = ggplot2::margin(t = 6)),
-      axis.title.y = ggplot2::element_text(size = 10, margin = ggplot2::margin(r = 10))
-    )
-  return(p)
+.rnameta_peak_exon_number_payload <- function(data, set_group_name = NULL) {
+  table <- .rnameta_peak_exon_number_table(data, set_group_name)
+  samples <- unique(as.character(table$Sample)); colors <- .rnameta_chart_palette()
+  list(type = "boxplot", title = "Peak Exon Number", yLabel = "Number of exons", scaleTransform = "linear", countLabel = "Count",
+       groups = lapply(seq_along(samples), function(i) list(name = samples[[i]], originalName = samples[[i]], color = colors[((i - 1L) %% length(colors)) + 1L], values = unname(table[Sample == samples[[i]], nexon]))))
+}
+
+#' Plot the exon-count distribution with an interactive boxplot
+#' @param preliminary_analysis_data Preliminary analysis output or prepared transcript table.
+#' @param set_group_name Optional replacement sample labels.
+#' @param width,height Optional widget dimensions.
+#' @return An htmlwidget.
+#' @export
+RNAmeta_peak_exon_number_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL,
+                                           width = NULL, height = NULL) {
+  .rnameta_chart_widget(.rnameta_peak_exon_number_payload(preliminary_analysis_data, set_group_name), width, height)
+}
+
+#' Export a peak exon number chart
+#' @param data Preliminary analysis output or prepared transcript table.
+#' @param file PNG or PDF output path.
+#' @inheritParams RNAmeta_peak_exon_number_plot
+#' @param width Output width before PNG scaling.
+#' @param height Optional exact output height.
+#' @param aspect_ratio Width/height ratio used when height is NULL.
+#' @param scale PNG resolution multiplier.
+#' @return The normalized output path, invisibly.
+#' @export
+RNAmeta_peak_exon_number_export <- function(data, file, set_group_name = NULL, width = 1180,
+                                            height = NULL, aspect_ratio = c(1180, 560), scale = 2) {
+  .rnameta_chart_export(.rnameta_peak_exon_number_payload(data, set_group_name), file, width, height, aspect_ratio, scale)
 }

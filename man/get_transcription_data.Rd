@@ -2,26 +2,18 @@
 % Please edit documentation in R/RNAmeta_get_transcription_plot.R
 \name{get_transcription_data}
 \alias{get_transcription_data}
-\title{Get Transcription Data}
+\title{Compute transcription boundary and heatmap data}
 \usage{
-get_transcription_data(preliminary_analysis_data = NULL)
+get_transcription_data(preliminary_analysis_data = NULL, seed = 1L)
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing multiple elements:
-\itemize{
-\item The 7th element contains \code{txdb_features}, which holds genomic feature data (e.g., CDS).
-\item The 2nd element contains \code{peak_gr}, which are the genomic regions of interest (e.g., peaks).
-\item The 6th element contains \code{flank_size}, used for adjusting the region around the feature.
-\item The 8th element contains \code{gene_max_tx_lengths}, representing the maximum transcription lengths for genes.
-}}
+\item{preliminary_analysis_data}{Output from RNAmeta_get_preliminary_analysis_data().}
+
+\item{seed}{Non-negative integer controlling transcript subsampling.}
 }
 \value{
-A list with two elements:
-\enumerate{
-\item A data table containing the coverage information for both transcription start sites and end sites (\code{cvg_list}).
-\item A list of peak heatmap data generated from the transcriptional regions (\code{peak_heatmap_data}).
-}
+A list containing boundary hits and one heatmap per sample.
 }
 \description{
-Get Transcription Data
+Compute transcription boundary and heatmap data
 }

@@ -101,6 +101,8 @@
 #' @param confidence_interval_range Range for the confidence interval.
 #'   Defines the upper and lower bounds of the confidence interval for the plot.
 #'   Default: c(0.025, 0.975)
+#' @param seed Non-negative integer controlling random site sampling and
+#'   confidence-interval resampling. The global random state is restored.
 #'
 #' @returns
 #'   Returns a plot object showing the distribution of genomic features (such as mRNA, ncRNA, or general transcripts)
@@ -108,6 +110,7 @@
 #'   The plot includes an optional confidence interval curve if specified.
 #'   The plot type and content vary depending on the 'plot_tx_type' parameter and the calculated values
 #'   for each genomic region sampled from the BED file.
+#'   A single transcript type returns one htmlwidget; multiple types return a named RNAmeta_meta_plots list.
 #' @export
 #'
 RNAmeta_meta_plot <- function(bed_file = NULL,
@@ -133,82 +136,108 @@ RNAmeta_meta_plot <- function(bed_file = NULL,
                               site_length_index = 1,
                               adjustment_factor = 1,
                               confidence_interval_resampling_time = 1000,
-                              confidence_interval_range = c(0.025, 0.975)
-                              ){
-  if(is.null(set_group_name)){
-    set_group_name_length = length(bed_file)
-  } else {
-    set_group_name_length = length(set_group_name)
+                              confidence_interval_range = c(0.025, 0.975),
+                              seed = 1L) {
+  seed <- .rnameta_validate_seed(seed)
+  plot_tx_type <- unique(as.character(plot_tx_type))
+  allowed_types <- c("tx", "mRNA", "ncRNA")
+  if (!length(plot_tx_type) || anyNA(plot_tx_type) || any(!plot_tx_type %in% allowed_types)) {
+    stop("plot_tx_type must contain one or more of: tx, mRNA, ncRNA.")
   }
+  if (!is.logical(tx_lncrna_overlap_mrna) || length(tx_lncrna_overlap_mrna) != 1L || is.na(tx_lncrna_overlap_mrna)) {
+    stop("tx_lncrna_overlap_mrna must be TRUE or FALSE.")
+  }
+  set_group_name_length <- if (is.null(set_group_name)) length(bed_file) else length(set_group_name)
   chrom_info <- .txdb_file_test(txdb_file)
-  bed_file <- .bed_file_test_for_gene_meta(bed_file = bed_file, chrom_info = chrom_info, set_group_name_length = set_group_name_length)
-  txdb_file <- AnnotationDbi::loadDb(txdb_file)
-  guitar_txdb <- .get_Guitar_txdb(txdb_file = txdb_file,
-                                  tx_five_utr_min_length = tx_five_utr_min_length,
-                                  tx_cds_min_length = tx_cds_min_length,
-                                  tx_three_utr_min_length = tx_three_utr_min_length,
-                                  tx_long_ncrna_min_length = tx_long_ncrna_min_length,
-                                  tx_promoter_length = tx_promoter_length,
-                                  tx_tail_length = tx_tail_length,
-                                  tx_ambiguity = tx_ambiguity,
-                                  txTxComponentProp = NULL,
-                                  txMrnaComponentProp = NULL,
-                                  txLncrnaComponentProp = NULL,
-                                  tx_primary_only = tx_primary_only,
-                                  plot_tx_type = plot_tx_type)
+  bed_file <- .bed_file_test_for_gene_meta(bed_file, chrom_info, set_group_name_length)
+  on.exit(unlink(bed_file, force = TRUE), add = TRUE)
+
+  txdb_path <- normalizePath(txdb_file, winslash = "/", mustWork = TRUE)
+  txdb <- AnnotationDbi::loadDb(txdb_path)
+  guitar_key <- paste(
+    "guitar-v4", .rnameta_file_fingerprint(txdb_path), tx_five_utr_min_length,
+    tx_cds_min_length, tx_three_utr_min_length, tx_long_ncrna_min_length,
+    tx_lncrna_overlap_mrna, tx_promoter_length, tx_tail_length, tx_ambiguity,
+    tx_primary_only, paste(plot_tx_type, collapse = ","), sep = ":"
+  )
+  guitar_txdb <- .rnameta_meta_cached(guitar_key, function() .get_Guitar_txdb(
+    txdb_file = txdb,
+    tx_five_utr_min_length = tx_five_utr_min_length,
+    tx_cds_min_length = tx_cds_min_length,
+    tx_three_utr_min_length = tx_three_utr_min_length,
+    tx_long_ncrna_min_length = tx_long_ncrna_min_length,
+    tx_lncrna_overlap_mrna = tx_lncrna_overlap_mrna,
+    tx_promoter_length = tx_promoter_length,
+    tx_tail_length = tx_tail_length,
+    tx_ambiguity = tx_ambiguity,
+    tx_primary_only = tx_primary_only,
+    plot_tx_type = plot_tx_type
+  ))
+
   sites_group <- .getStGroup(bed_file = bed_file, set_GRange_lists = NULL, set_group_name = set_group_name)
   group_names <- names(sites_group)
-  sites_group_number <- length(sites_group)
-  sites_points_normlize <- list()
-  sites_points_relative <- list()
-  point_weight <- list()
-  for (i in seq_len(sites_group_number)) {
-    group_name = group_names[[i]]
-    print(paste("sample", set_sample_number, "points for" , group_name, sep = " "))
-    sites_points <- .sample_points(sites_group[i],
-                                  set_sample_number = set_sample_number,
-                                  set_ambiguity = set_ambiguity,
-                                  plot_tx_type =  plot_tx_type,
-                                  sample_model = sample_model,
-                                  map_filter_transcript = map_filter_transcript,
-                                  guitar_txdb)
+  sites_points_relative <- stats::setNames(vector("list", length(plot_tx_type)), plot_tx_type)
+  point_weight <- stats::setNames(vector("list", length(plot_tx_type)), plot_tx_type)
+  mapping_keys <- character(length(sites_group))
 
+  for (i in seq_along(sites_group)) {
+    group_name <- group_names[[i]]
+    mapping_keys[[i]] <- paste(
+      "meta-map-v4", .rnameta_granges_fingerprint(sites_group[[i]]), guitar_key,
+      set_sample_number, set_ambiguity, paste(plot_tx_type, collapse = ","),
+      sample_model, map_filter_transcript, overlap_index, site_length_index, seed, sep = ":"
+    )
+    normalized <- .rnameta_meta_cached(mapping_keys[[i]], function() {
+      .rnameta_with_seed(.rnameta_seed_offset(seed, i - 1L), {
+        sites_points <- .sample_points(
+          sites_group[i], set_sample_number = set_sample_number,
+          set_ambiguity = set_ambiguity, plot_tx_type = plot_tx_type,
+          sample_model = sample_model, map_filter_transcript = map_filter_transcript,
+          guitar_txdb
+        )
+        stats::setNames(lapply(plot_tx_type, function(tx_type) {
+          .normalize(sites_points, guitar_txdb, tx_type, overlap_index, site_length_index)
+        }), plot_tx_type)
+      })
+    })
     for (tx_type in plot_tx_type) {
-      sites_points_normlize[[tx_type]][[group_name]] <- .normalize(sites_points, guitar_txdb, tx_type, overlap_index, site_length_index)
-      sites_points_relative[[tx_type]][[group_name]] <- sites_points_normlize[[tx_type]][[group_name]][[1]]
-      point_weight[[tx_type]][[group_name]] <- sites_points_normlize[[tx_type]][[group_name]][[2]]
+      sites_points_relative[[tx_type]][[group_name]] <- normalized[[tx_type]][[1L]]
+      point_weight[[tx_type]][[group_name]] <- normalized[[tx_type]][[2L]]
     }
   }
-  for (tx_type in plot_tx_type)
-  {
-    print(paste("start figure plotting for", tx_type, "..."))
-    if (tx_type == "mRNA") {
-      tx_type_name = "mRNA"
-    } else if (tx_type == "ncRNA") {
-      tx_type_name = "ncRNA"
-    } else {
-      tx_type_name = "Transcript"
-    }
-    title <- paste("Distribution on", tx_type_name)
-    density_data_frame_confidence_interval <- .generate_density_confidence_interval(
-                                                                  sites_points_relative = sites_points_relative[[tx_type]],
-                                                                  sites_point_weight = point_weight[[tx_type]],
-                                                                  confidence_interval_resampling_time = confidence_interval_resampling_time,
-                                                                  adjustment_factor = adjustment_factor,
-                                                                  enable_confidence_interval = enable_confidence_interval,
-                                                                  confidence_interval_range = confidence_interval_range)
-    p <- .plot_density_confidence_interval(
-                         density_data_frame_confidence_interval = density_data_frame_confidence_interval,
-                         component_width = guitar_txdb[[tx_type]]$component_width_average_pct,
-                         head_or_tail = head_or_tail,
-                         title = title,
-                         enable_confidence_interval = enable_confidence_interval,
-                         tx_type = tx_type,
-                         tx_promoter_length = tx_promoter_length,
-                         tx_tail_length = tx_tail_length)
-    for (temp_file in bed_file) {
-      unlink(temp_file)
-    }
-    return(p)
-  }}
 
+  widgets <- stats::setNames(lapply(seq_along(plot_tx_type), function(tx_index) {
+    tx_type <- plot_tx_type[[tx_index]]
+    tx_type_name <- switch(tx_type, mRNA = "mRNA", ncRNA = "ncRNA", tx = "Transcript")
+    density_key <- paste(
+      "meta-density-v3", tx_type, paste(mapping_keys, collapse = "|"), adjustment_factor,
+      enable_confidence_interval, confidence_interval_resampling_time,
+      paste(confidence_interval_range, collapse = ","), seed, sep = ":"
+    )
+    density_data <- .rnameta_meta_cached(density_key, function() {
+      .rnameta_with_seed(.rnameta_seed_offset(seed, length(sites_group) + tx_index - 1L), {
+        .generate_density_confidence_interval(
+          sites_points_relative = sites_points_relative[[tx_type]],
+          sites_point_weight = point_weight[[tx_type]],
+          confidence_interval_resampling_time = confidence_interval_resampling_time,
+          adjustment_factor = adjustment_factor,
+          enable_confidence_interval = enable_confidence_interval,
+          confidence_interval_range = confidence_interval_range
+        )
+      })
+    })
+    payload <- .rnameta_meta_payload(
+      density_data,
+      component_width = guitar_txdb[[tx_type]]$component_width_average_pct,
+      title = paste("Distribution on", tx_type_name),
+      show_ci = enable_confidence_interval,
+      head_or_tail = head_or_tail,
+      tx_promoter_length = tx_promoter_length,
+      tx_tail_length = tx_tail_length
+    )
+    .rnameta_chart_widget(payload)
+  }), plot_tx_type)
+
+  if (length(widgets) == 1L) return(widgets[[1L]])
+  structure(widgets, class = c("RNAmeta_meta_plots", "list"))
+}

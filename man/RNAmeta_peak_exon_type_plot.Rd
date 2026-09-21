@@ -2,24 +2,28 @@
 % Please edit documentation in R/RNAmeta_peak_exon_type_plot.R
 \name{RNAmeta_peak_exon_type_plot}
 \alias{RNAmeta_peak_exon_type_plot}
-\title{RNAmeta_peak_exon_type_plot}
+\title{Plot peak exon types with an interactive stacked bar chart}
 \usage{
 RNAmeta_peak_exon_type_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  animate = TRUE,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list of data containing the peak exon type information. The data should contain exon information, with columns such as \code{Sample} and \code{exonLoc}.
-Each element in the list corresponds to one set of data to be plotted.}
+\item{preliminary_analysis_data}{Preliminary analysis output or prepared exon data.}
 
-\item{set_group_name}{An optional vector of custom group names for the \code{Sample} column. If \code{NULL}, the function will use the original sample names in the data.
-If provided, the length of this vector must match the number of unique sample groups.}
+\item{set_group_name}{Optional replacement sample labels.}
+
+\item{animate}{Animate bars in interactive viewers.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A \code{ggplot} object representing a bar plot of the percentage distribution of exon locations for each sample. The bars are grouped by \code{Sample} and colored by \code{exonLoc}.
-The legend position will adjust based on the number of unique sample groups.
+An htmlwidget.
 }
 \description{
-RNAmeta_peak_exon_type_plot
+Plot peak exon types with an interactive stacked bar chart
 }

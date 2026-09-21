@@ -2,22 +2,25 @@
 % Please edit documentation in R/RNAmeta_get_gene_matrix_plot.R
 \name{RNAmeta_get_gene_matrix_plot}
 \alias{RNAmeta_get_gene_matrix_plot}
-\title{Generate a Venn Diagram of Gene Matrix}
+\title{Plot Gene Matrix intersections}
 \usage{
 RNAmeta_get_gene_matrix_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing analysis data. The first element should be a list of data frames or similar structures where each element has a 'gene_name' column.}
+\item{preliminary_analysis_data}{Preliminary Analysis output or RNAmeta_gene_matrix_data() result.}
 
-\item{set_group_name}{A character vector of group names. If provided, it will be used to label the Venn diagram categories. The length of this vector should match the number of elements in \code{preliminary_analysis_data[[1]]}.
-If \code{NULL}, default group names ("Group1", "Group2", "Group3", "Group4", "Group5") will be used.}
+\item{set_group_name}{Optional sample labels.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A Venn diagram object (from the \code{VennDiagram} package) representing the gene overlap between the BED files.
+An htmlwidget.
 }
 \description{
-Generate a Venn Diagram of Gene Matrix
+Plot Gene Matrix intersections
 }

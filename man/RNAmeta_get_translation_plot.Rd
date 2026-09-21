@@ -2,29 +2,31 @@
 % Please edit documentation in R/RNAmeta_get_translation_plot.R
 \name{RNAmeta_get_translation_plot}
 \alias{RNAmeta_get_translation_plot}
-\title{Generate Translation Plot}
+\title{Plot translation site profiles}
 \usage{
-RNAmeta_get_translation_plot(translation_data = NULL, set_group_name = NULL)
+RNAmeta_get_translation_plot(
+  translation_data = NULL,
+  set_group_name = NULL,
+  heatmap_sample = "all",
+  width = NULL,
+  height = NULL,
+  panel = "all"
+)
 }
 \arguments{
-\item{translation_data}{A list containing:
-\itemize{
-\item \code{tsl_list}: A data table with translation start and end site coverage.
-\item \code{peak_heatmap_data}: A list containing translation heatmap data.
-}}
+\item{translation_data}{Data returned by get_translation_data().}
 
-\item{set_group_name}{An optional vector of custom group names to replace the default sample names in the data.
-If \code{NULL}, the function will use the original sample names.}
+\item{set_group_name}{Optional sample labels.}
+
+\item{heatmap_sample}{Sample name/index to display, or "all".}
+
+\item{width, height}{Optional widget dimensions.}
+
+\item{panel}{Panel name/index to display, or "all" to return separate plots for every panel.}
 }
 \value{
-A list of four ggplot objects:
-\enumerate{
-\item Translation Start Site (TSS) Density Plot.
-\item Translation End Site (TES) Density Plot.
-\item Heatmap for the TSS region.
-\item Heatmap for the TES region.
-}
+One selected panel as an htmlwidget, or a named list of separate htmlwidgets when panel is "all".
 }
 \description{
-Generate Translation Plot
+Plot translation site profiles
 }

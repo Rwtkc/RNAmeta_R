@@ -132,6 +132,8 @@
   qregion <- qregion[as.character(GenomicRanges::seqnames(qregion)) %in% as.character(GenomeInfoDb::seqlevels(feature_coords))]
   GenomeInfoDb::seqlevels(qregion) <- GenomicRanges::intersect(GenomeInfoDb::seqlevels(qregion), GenomeInfoDb::seqlevels(feature_coords))
   peak_gene_ranges <- GenomicFeatures::mapToTranscripts(qregion, feature_coords)
+  if (length(tss_gene_ranges) > 4000L) tss_gene_ranges <- tss_gene_ranges[unique(round(seq(1, length(tss_gene_ranges), length.out = 4000L)))]
+  if (length(tes_gene_ranges) > 4000L) tes_gene_ranges <- tes_gene_ranges[unique(round(seq(1, length(tes_gene_ranges), length.out = 4000L)))]
   gene_ranges <- list()
   gene_ranges[["tss"]] <- tss_gene_ranges
   gene_ranges[["tes"]] <- tes_gene_ranges

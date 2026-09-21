@@ -2,24 +2,34 @@
 % Please edit documentation in R/RNAmeta_peak_distribution_plot.R
 \name{RNAmeta_peak_distribution_plot}
 \alias{RNAmeta_peak_distribution_plot}
-\title{Plot Peak Distribution}
+\title{Plot peak distribution with the RNAmeta interactive chart}
 \usage{
 RNAmeta_peak_distribution_plot(
   preliminary_analysis_data = NULL,
   set_group_name = NULL,
-  features_to_remove = NULL
+  features_to_remove = NULL,
+  show_labels = TRUE,
+  animate = TRUE,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing the preliminary analysis data, typically including genomic features and their frequencies across different samples.}
+\item{preliminary_analysis_data}{Preliminary analysis output or a prepared table with Feature, Frequency and Sample columns.}
 
-\item{set_group_name}{A vector of group names to be used for color grouping in the plot. The number of group names should match the number of unique samples in \code{all_sites}.}
+\item{set_group_name}{Optional replacement sample labels.}
 
-\item{features_to_remove}{A vector of feature names (e.g., "Promoter", "UTR5", etc.) that should be excluded from the analysis and visualization.}
+\item{features_to_remove}{Feature names to exclude.}
+
+\item{show_labels}{Show frequency labels above bars.}
+
+\item{animate}{Animate bars in interactive viewers.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A \code{ggplot} object representing the bar plot of peak distribution across features. The plot shows the frequency of each feature for different samples, with a manual color scheme applied to each group.
+An htmlwidget.
 }
 \description{
-Plot Peak Distribution
+Plot peak distribution with the RNAmeta interactive chart
 }

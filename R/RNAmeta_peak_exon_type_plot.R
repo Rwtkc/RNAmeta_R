@@ -1,62 +1,59 @@
-#' @title RNAmeta_peak_exon_type_plot
-#' @param preliminary_analysis_data A list of data containing the peak exon type information. The data should contain exon information, with columns such as `Sample` and `exonLoc`.
-#'        Each element in the list corresponds to one set of data to be plotted.
-#' @param set_group_name An optional vector of custom group names for the `Sample` column. If `NULL`, the function will use the original sample names in the data.
-#'        If provided, the length of this vector must match the number of unique sample groups.
-#' @returns A `ggplot` object representing a bar plot of the percentage distribution of exon locations for each sample. The bars are grouped by `Sample` and colored by `exonLoc`.
-#'          The legend position will adjust based on the number of unique sample groups.
-#' @export
-RNAmeta_peak_exon_type_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL){
-  total_all_sites <- NULL
-  for(i in 1:length(preliminary_analysis_data[[1]])){
-    cct <- NULL
-    all_sites <- NULL
-    cct <- preliminary_analysis_data[[1]][[i]]
-    cct2 = cct[[2]]
-    all_sites <- data.table::as.data.table(cct2)
-    all_sites[,group := IRanges::gsub("_.*", "", Sample)]
-    all_sites[,Sample := IRanges::gsub(".*_", "", Sample)]
-    total_all_sites <- IRanges::rbind(total_all_sites, all_sites)
-  }
-
-  all_sites <- total_all_sites
-  exon_type_stat <- all_sites[, .N, by = c("exonLoc", "Sample")]
-  exon_type_stat[, total := sum(N), by = c("Sample")]
-  exon_type_stat[, N := N / total]
-
-  if(is.null(set_group_name)){} else {
-    original_group_names <- IRanges::unique(exon_type_stat$Sample)
-    if (length(set_group_name) != length(original_group_names)) {
-      stop(paste("The number of user-defined group names does not match the number of groups in the data.",
-                 "Length of set_group_name:", length(set_group_name),
-                 "Length of original_group_names:", length(original_group_names)))
-    }
-    group_mapping <- stats::setNames(set_group_name, original_group_names)
-    exon_type_stat$Sample <- dplyr::recode(exon_type_stat$Sample, !!!group_mapping)
-  }
-
-  if(length(IRanges::unique(exon_type_stat$Sample)) > 1){
-    legend_position <- "right"
+.rnameta_peak_exon_type_table <- function(data, set_group_name = NULL) {
+  input <- .rnameta_preliminary_component(data, 2L, c("Sample", "exonLoc"))
+  input <- .rnameta_clean_sample_names(input)
+  if (all(c("Count", "Percentage") %in% names(input))) {
+    result <- input[, .(Count = sum(as.numeric(Count)), Percentage = sum(as.numeric(Percentage))), by = .(Sample, exonLoc = as.character(exonLoc))]
   } else {
-    legend_position <- "none"
+    result <- input[, .(Count = .N), by = .(Sample, exonLoc = as.character(exonLoc))]
+    result[, Percentage := if (sum(Count) > 0) Count / sum(Count) * 100 else 0, by = Sample]
   }
+  result <- .rnameta_rename_samples(result, set_group_name)
+  result[, exonLoc := factor(exonLoc, levels = c("First", "Middle", "Last"))]
+  result[order(Sample, exonLoc)]
+}
 
-  p <- ggpubr::ggbarplot(exon_type_stat, x = 'Sample', y = 'N', fill = "exonLoc",
-                  width = 0.3,
-                  palette = c("#a30545", "#f26e42", "#7ecba4")) +
-    ggplot2::labs(x = "", y = "Percentage") +
-    ggplot2::theme(legend.position = legend_position,
-          legend.title = ggplot2::element_text(size = 10),
-          text = ggplot2::element_text(color = "#333333", size = 8),
-          legend.text = ggplot2::element_text(size = 12),
-          axis.title.y = ggplot2::element_text(size = 12),
-          axis.text.x = ggplot2::element_text(size = 12),
-          axis.text.y = ggplot2::element_text(size = 10),
-          axis.ticks = ggplot2::element_blank(),
-          panel.grid.major.x = ggplot2::element_blank(),
-          panel.grid.minor.x = ggplot2::element_blank(),
-          panel.grid.major.y = ggplot2::element_line(color = "gray90"),
-          panel.background = ggplot2::element_blank(),
-          axis.line = ggplot2::element_line(color = "#333333")) + ggplot2::scale_y_continuous(labels = scales::percent_format(scale = 100))
-  return(p)
+.rnameta_peak_exon_type_payload <- function(data, set_group_name = NULL, animate = TRUE) {
+  table <- .rnameta_peak_exon_type_table(data, set_group_name)
+  samples <- unique(as.character(table$Sample))
+  locations <- c("First", "Middle", "Last")
+  locations <- locations[locations %in% as.character(table$exonLoc)]
+  palette <- c(First = "#a30545", Middle = "#f26e42", Last = "#7ecba4")
+  list(
+    type = "stacked_bar", title = "Peak Exon Type", yLabel = "Percentage",
+    categories = samples, yDomain = c(0, 100), yTicks = seq(0, 100, 20),
+    showLabels = FALSE, animate = isTRUE(animate), tooltipValueLabel = "Percentage",
+    series = lapply(locations, function(location) {
+      current <- table[as.character(exonLoc) == location]
+      values <- current$Percentage[match(samples, as.character(current$Sample))]
+      values[is.na(values)] <- 0
+      list(name = location, color = unname(palette[[location]]), values = unname(values))
+    })
+  )
+}
+
+#' Plot peak exon types with an interactive stacked bar chart
+#' @param preliminary_analysis_data Preliminary analysis output or prepared exon data.
+#' @param set_group_name Optional replacement sample labels.
+#' @param animate Animate bars in interactive viewers.
+#' @param width,height Optional widget dimensions.
+#' @return An htmlwidget.
+#' @export
+RNAmeta_peak_exon_type_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL,
+                                         animate = TRUE, width = NULL, height = NULL) {
+  .rnameta_chart_widget(.rnameta_peak_exon_type_payload(preliminary_analysis_data, set_group_name, animate), width, height)
+}
+
+#' Export a peak exon type chart
+#' @param data Preliminary analysis output or prepared exon data.
+#' @param file PNG or PDF output path.
+#' @inheritParams RNAmeta_peak_exon_type_plot
+#' @param width Output width before PNG scaling.
+#' @param height Optional exact output height.
+#' @param aspect_ratio Width/height ratio used when height is NULL.
+#' @param scale PNG resolution multiplier.
+#' @return The normalized output path, invisibly.
+#' @export
+RNAmeta_peak_exon_type_export <- function(data, file, set_group_name = NULL, width = 1180,
+                                          height = NULL, aspect_ratio = c(1180, 560), scale = 2) {
+  .rnameta_chart_export(.rnameta_peak_exon_type_payload(data, set_group_name, FALSE), file, width, height, aspect_ratio, scale)
 }

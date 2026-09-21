@@ -234,7 +234,7 @@
   return(anno)
 }
 
-.get_genomic_annotation <- function(peaks = NULL,  txdb_features = NULL, genomic_annotation_priority = NULL, same_strand = FALSE) {
+.get_genomic_annotation_legacy <- function(peaks = NULL,  txdb_features = NULL, genomic_annotation_priority = NULL, same_strand = FALSE) {
   annotation <- rep(NA, length(peaks))
   flag <- rep(FALSE, length(peaks))
   detail_genomic_annotation <- data.frame(
@@ -487,5 +487,8 @@
   rp6[, Sample := gn]
   rp6[, c("transcript_id", "index", "gene") := NULL]
   res <- list(rp, rp2, rp3, rp6, rp1)
+  gene_type_counts <- data.table::copy(peak_anno$gene_type_counts)
+  if (nrow(gene_type_counts)) gene_type_counts[, Sample := gn]
+  attr(res, "gene_type_counts") <- gene_type_counts
   return(res)
 }

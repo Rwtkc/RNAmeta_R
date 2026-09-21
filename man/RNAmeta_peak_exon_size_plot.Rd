@@ -2,24 +2,25 @@
 % Please edit documentation in R/RNAmeta_peak_exon_size_plot.R
 \name{RNAmeta_peak_exon_size_plot}
 \alias{RNAmeta_peak_exon_size_plot}
-\title{RNAmeta_peak_exon_size_plot}
+\title{Plot exon lengths by exon position}
 \usage{
 RNAmeta_peak_exon_size_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list of data containing the peak exon size information, where each element is a list containing data for a particular analysis.
-The first level of the list should contain the data, and each item should include a second level with a \code{Sample} and \code{length} column.}
+\item{preliminary_analysis_data}{Preliminary analysis output or prepared exon table.}
 
-\item{set_group_name}{A vector of custom group names to replace the original sample names in the plot. The length of this vector must match the number of unique sample groups in the data.
-If \code{NULL}, the original sample names are used.}
+\item{set_group_name}{Optional replacement sample labels.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A \code{ggplot} object that displays a boxplot of exon sizes (log2 scale) across samples, with facets by exon location.
-The boxplot colors correspond to the sample groups, and the plot includes a legend if more than one unique sample group is present.
+An htmlwidget.
 }
 \description{
-RNAmeta_peak_exon_size_plot
+Plot exon lengths by exon position
 }

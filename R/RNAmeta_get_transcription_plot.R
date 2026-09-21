@@ -1,190 +1,54 @@
-#' @title Get Transcription Data
-#' @param preliminary_analysis_data A list containing multiple elements:
-#'   - The 7th element contains `txdb_features`, which holds genomic feature data (e.g., CDS).
-#'   - The 2nd element contains `peak_gr`, which are the genomic regions of interest (e.g., peaks).
-#'   - The 6th element contains `flank_size`, used for adjusting the region around the feature.
-#'   - The 8th element contains `gene_max_tx_lengths`, representing the maximum transcription lengths for genes.
-#' @returns A list with two elements:
-#'   1. A data table containing the coverage information for both transcription start sites and end sites (`cvg_list`).
-#'   2. A list of peak heatmap data generated from the transcriptional regions (`peak_heatmap_data`).
+#' Compute transcription boundary and heatmap data
+#' @param preliminary_analysis_data Output from RNAmeta_get_preliminary_analysis_data().
+#' @param seed Non-negative integer controlling transcript subsampling.
+#' @return A list containing boundary hits and one heatmap per sample.
 #' @export
-get_transcription_data <- function(preliminary_analysis_data = NULL){
-  txdb_features <- preliminary_analysis_data[[7]]
-  peak_gr <- preliminary_analysis_data[[2]]
-  flank_size <- preliminary_analysis_data[[6]]
-  gene_max_tx_lengths <- preliminary_analysis_data[[8]]
-  cct3 = lapply(1:length(peak_gr), .get_feature_boundary_coverage_new, query_regions = peak_gr, feature_coords = txdb_features$cds, flank_size = flank_size, boundary_type = 'Transcription_start_site', sample_n = 10000)
-  cct4 = lapply(1:length(peak_gr), .get_feature_boundary_coverage_new , query_regions = peak_gr, feature_coords = txdb_features$cds, flank_size = flank_size, boundary_type = 'Transcription_end_site', sample_n = 10000)
-  cvg_list = data.table::rbindlist(c(cct3,cct4))
-  peak_heatmap_data = lapply(1:length(peak_gr), .get_feature_boundary_heatmap, peak_gr, txdb_features, gene_max_tx_lengths, flank_size)
-  cvg_list_and_peak_heatmap_data <- list(cvg_list, peak_heatmap_data[[1]])
-  return(cvg_list_and_peak_heatmap_data)
+get_transcription_data <- function(preliminary_analysis_data = NULL, seed = 1L) {
+  seed <- .rnameta_validate_seed(seed)
+  txdb_features <- .rnameta_preliminary_value(preliminary_analysis_data, "txdb_features", 7L); peak_gr <- .rnameta_preliminary_value(preliminary_analysis_data, "peak_gr_list", 2L)
+  flank_size <- .rnameta_preliminary_value(preliminary_analysis_data, "flanking_size", 6L); gene_max_tx_lengths <- .rnameta_preliminary_value(preliminary_analysis_data, "gene_max_tx_lengths", 8L)
+  annotation_key <- paste("transcription-v4", flank_size,
+                          .rnameta_granges_fingerprint(txdb_features$cds),
+                          .rnameta_object_fingerprint(gene_max_tx_lengths), seed, sep = ":")
+  sample_results <- lapply(seq_along(peak_gr), function(i) {
+    sample_names <- names(peak_gr); sample_name <- if (is.null(sample_names) || !nzchar(sample_names[[i]])) paste0("Group", i) else sample_names[[i]]
+    sample_key <- paste(annotation_key, sample_name, .rnameta_granges_fingerprint(peak_gr[[i]]), sep = ":")
+    .rnameta_site_profile_cached(sample_key, function() {
+      query <- stats::setNames(list(peak_gr[[i]]), sample_name)
+      sample_seed <- .rnameta_seed_offset(seed, i - 1L)
+      starts <- .get_feature_boundary_coverage_new(1L, query, txdb_features$cds, flank_size, "Transcription_start_site", 10000, sample_seed)
+      ends <- .get_feature_boundary_coverage_new(1L, query, txdb_features$cds, flank_size, "Transcription_end_site", 10000, sample_seed)
+      list(coverage = data.table::rbindlist(list(starts, ends), use.names = TRUE, fill = TRUE),
+           heatmap = .get_feature_boundary_heatmap(1L, query, txdb_features, gene_max_tx_lengths, flank_size))
+    })
+  })
+  heatmaps <- stats::setNames(lapply(sample_results, `[[`, "heatmap"), names(peak_gr))
+  list(data.table::rbindlist(lapply(sample_results, `[[`, "coverage"), use.names = TRUE, fill = TRUE), heatmaps)
+}
+#' Plot transcription site profiles
+#' @param transcription_data Data returned by get_transcription_data().
+#' @param set_group_name Optional sample labels.
+#' @param heatmap_sample Sample name/index to display, or "all".
+#' @param panel Panel name/index to display, or "all" to return separate plots for every panel.
+#' @param width,height Optional widget dimensions.
+#' @return One selected panel as an htmlwidget, or a named list of separate htmlwidgets when panel is "all".
+#' @export
+RNAmeta_get_transcription_plot <- function(transcription_data = NULL, set_group_name = NULL, heatmap_sample = "all", width = NULL, height = NULL, panel = "all") {
+  .rnameta_site_profile_plot(transcription_data, set_group_name, "Transcription", width, height, heatmap_sample, panel)
 }
 
-#' @title RNAmeta_get_transcription_plot
-#' @param transcription_data A list containing two elements:
-#'   - The first element is a data frame or data table containing information on transcription coverage (`cvg_list`).
-#'   - The second element is a list with data related to peak heatmap data for the transcriptional regions (i.e., `peak_heatmap_data`).
-#' @param set_group_name An optional vector of custom group names to replace the default sample names in the data. The length of this vector must match the number of unique sample groups in the data.
-#'        If `NULL`, the function will use the original sample names.
-#' @returns A list of ggplot objects. The list contains the following plots:
-#'   1. A density plot of transcription coverage around the transcription start site (TSS).
-#'   2. A density plot of transcription coverage around the transcription end site (TES).
-#'   3. A heatmap of transcription signal for the TSS region.
-#'   4. A heatmap of transcription signal for the TES region.
+#' Export transcription site profiles
+#' @param data Data returned by get_transcription_data().
+#' @param file PNG or PDF path.
+#' @param set_group_name Optional sample labels.
+#' @param heatmap_sample Sample name/index to export, or "all".
+#' @param panel Panel name/index to export, or "all" to write one file per panel.
+#' @param width Output width.
+#' @param height Optional exact height.
+#' @param aspect_ratio Width/height ratio when height is NULL.
+#' @param scale PNG resolution multiplier.
+#' @return One output path, or named output paths for all panels, invisibly.
 #' @export
-RNAmeta_get_transcription_plot <- function(transcription_data = NULL, set_group_name = NULL){
-  cvg_list <- transcription_data[[1]]
-  peak_heatmap_data <- transcription_data[[2]]
-
-  col <- grDevices::colorRampPalette(c("#420046", "#fedc00"))(200)
-  if(nrow(cvg_list) > 0){
-    cct3 <- cvg_list[feature == "Transcription_start_site"]
-    cct4 <- cvg_list[feature == "Transcription_end_site"]
-    xmin <- IRanges::unique(cct3$xmin)
-    xmax <- IRanges::unique(cct3$xmax)
-    flank_size_3 <- IRanges::unique(cct3$flankSize)
-
-    if(is.null(set_group_name)){} else {
-      original_group_names <- IRanges::unique(cct3$Sample)
-      if (length(set_group_name) != length(original_group_names)) {
-        stop(paste("The number of user-defined group names does not match the number of groups in the data.",
-                   "Length of set_group_name:", length(set_group_name),
-                   "Length of original_group_names:", length(original_group_names)))
-      }
-      group_mapping <- stats::setNames(set_group_name, original_group_names)
-      cct3$Sample <- dplyr::recode(cct3$Sample, !!!group_mapping)
-    }
-    if(length(unique(cct3$Sample)) > 1){
-      legend_position <- "right"
-    } else {
-      legend_position <- "none"
-    }
-
-    p1 <- suppressWarnings(ggplot2::ggplot(cct3, ggplot2::aes(x = rel_pos, colour = Sample)) +
-                             ggplot2::ggtitle("Distribution on transcription start site") +
-                             ggplot2::scale_x_continuous(labels = scales::label_comma(), breaks = scales::pretty_breaks(n = 10), limits = c(xmin, xmax)) +
-                             ggplot2::scale_y_continuous(labels = scales::label_scientific(), breaks = scales::pretty_breaks(n = 8)) +
-                             ggplot2::theme(axis.ticks = ggplot2::element_line(),
-                                            axis.line = ggplot2::element_line(),
-                                            plot.title = ggplot2::element_text(hjust = 0.5, size = 18),
-                                            panel.grid.major = ggplot2::element_blank(),
-                                            axis.title.y = ggplot2::element_text(size = 14),
-                                            axis.title.x = ggplot2::element_text(size = 14),
-                                            panel.grid.minor = ggplot2::element_blank(),
-                                            panel.background = ggplot2::element_blank(),
-                                            legend.title = ggplot2::element_blank(),
-                                            legend.position = legend_position) +
-                             ggplot2::xlab("Region around the site (0 and 5' -> 3' direction)") +
-                             ggplot2::ylab("Density") +
-                             ggplot2::geom_density(alpha = 0.4) +
-                             ggplot2::geom_vline(xintercept = 0, linetype = "dotted"))
-    #----------------------------------------------------
-    xmin2 <- IRanges::unique(cct4$xmin)
-    xmax2 <- IRanges::unique(cct4$xmax)
-    flank_size_4 <- IRanges::unique(cct4$flankSize)
-    if(is.null(set_group_name)){} else {
-      original_group_names <- IRanges::unique(cct4$Sample)
-      if (length(set_group_name) != length(original_group_names)) {
-        stop(paste("The number of user-defined group names does not match the number of groups in the data.",
-                   "Length of set_group_name:", length(set_group_name),
-                   "Length of original_group_names:", length(original_group_names)))
-      }
-      group_mapping <- stats::setNames(set_group_name, original_group_names)
-      cct4$Sample <- dplyr::recode(cct4$Sample, !!!group_mapping)
-    }
-    if(length(IRanges::unique(cct4$Sample)) > 1){
-      legend_position <- "right"
-    } else {
-      legend_position <- "none"
-    }
-    p2 <- suppressWarnings(ggplot2::ggplot(cct4, ggplot2::aes(x = rel_pos, colour = Sample)) +
-                             ggplot2::ggtitle("Distribution on transcription end site") +
-                             ggplot2::scale_x_continuous(labels = scales::label_comma(), breaks = scales::pretty_breaks(n = 10), limits = c(xmin2, xmax2)) +
-                             ggplot2::scale_y_continuous(labels = scales::label_scientific(), breaks = scales::pretty_breaks(n = 8)) +
-                             ggplot2::theme(axis.ticks = ggplot2::element_line(),
-                                            axis.line = ggplot2::element_line(),
-                                            plot.title = ggplot2::element_text(hjust = 0.5,size = 18),
-                                            axis.title.y = ggplot2::element_text(size = 14),
-                                            axis.title.x = ggplot2::element_text(size = 14),
-                                            panel.grid.major = ggplot2::element_blank(),
-                                            panel.grid.minor = ggplot2::element_blank(),
-                                            panel.background = ggplot2::element_blank(),
-                                            legend.title = ggplot2::element_blank(),
-                                            legend.position = legend_position) +
-                             ggplot2::xlab("Region around the site (0 and 5' -> 3' direction)") +
-                             ggplot2::ylab("Density") +
-                             ggplot2::geom_density(alpha = 0.4) +
-                             ggplot2::geom_vline(xintercept = 0, linetype = "dotted"))
-    #----------------------------------------------------
-    xlim_5 <- peak_heatmap_data[[2]]
-    xlim_3 <- peak_heatmap_data[[1]]
-    tag_matrix_5 <- peak_heatmap_data[[4]]
-    tag_matrix_3 <- peak_heatmap_data[[3]]
-    min_xlim_5 <- min(xlim_5)
-    max_xlim_5 <- max(xlim_5)
-    rows_5 <- nrow(tag_matrix_5)
-    cols_5 <- ncol(tag_matrix_5)
-    indices_5 <- S4Vectors::expand.grid(row = 1:rows_5, col = 1:cols_5)
-    values_5 <- apply(indices_5, 1, function(idx) tag_matrix_5[idx["row"], idx["col"]])
-    result_data_5 <- data.frame(row_number = indices_5$row,
-                                col_number = indices_5$col,
-                                value = values_5)
-    data_column_5 <- integer(0)
-    for (i in min_xlim_5 : max_xlim_5 ) {
-      data_column_5 <- c(data_column_5, rep(i, rows_5))
-    }
-    result_data_5$col_number <- data_column_5
-    p3 <- suppressWarnings(ggplot2::ggplot(result_data_5, ggplot2::aes(x = col_number, y = row_number, fill = value)) +
-                             ggplot2::geom_tile() +
-                             ggplot2::scale_fill_gradientn(colors = c("#420046", "#fedc00")) +
-                             ggplot2::scale_x_continuous(expand = c(0.003, 0), breaks = pretty(result_data_5$col_number, n = 8)) +
-                             ggplot2::scale_y_continuous(expand = c(0.008, 0), breaks = pretty(result_data_5$row_number, n = 10)) +
-                             ggplot2::labs(title = "Transcription.Tss.Heatmap") +
-                             ggplot2::theme_minimal() + ggplot2::theme(
-                               plot.subtitle = ggplot2::element_blank(),
-                               plot.caption = ggplot2::element_blank(),
-                               legend.title = ggplot2::element_blank(),
-                               axis.title.x = ggplot2::element_blank(),
-                               axis.title.y = ggplot2::element_blank(),
-                               panel.grid.major = ggplot2::element_blank(),
-                               panel.grid.minor = ggplot2::element_blank(),
-                               plot.margin = ggplot2::unit(c(5.5, 14, 5.5, 14), "points"),
-                               plot.title = ggplot2::element_text(hjust = 0.5))
-    )
-    #----------------------------------------------------
-    min_xlim_3 <- min(xlim_3)
-    max_xlim_3 <- max(xlim_3)
-    rows_3 <- nrow(tag_matrix_3)
-    cols_3 <- ncol(tag_matrix_3)
-    indices_3 <- S4Vectors::expand.grid(row = 1:rows_3, col = 1:cols_3)
-    values_3 <- apply(indices_3, 1, function(idx) tag_matrix_3[idx["row"], idx["col"]])
-    result_data_3 <- data.frame(row_number = indices_3$row,
-                                col_number = indices_3$col,
-                                value = values_3)
-    data_column_3 <- integer(0)
-    for (i in min_xlim_3 : max_xlim_3 ) {
-      data_column_3 <- c(data_column_3, rep(i, rows_3))
-    }
-    result_data_3$col_number <- data_column_3
-    p4 <- suppressWarnings(ggplot2::ggplot(result_data_3, ggplot2::aes(x = col_number, y = row_number, fill = value)) +
-                             ggplot2::geom_tile() +
-                             ggplot2::scale_fill_gradientn(colors = c("#420046", "#fedc00")) +
-                             ggplot2::scale_x_continuous(expand = c(0.003, 0), breaks = pretty(result_data_3$col_number, n = 8)) +
-                             ggplot2::scale_y_continuous(expand = c(0.008, 0), breaks = pretty(result_data_3$row_number, n = 10)) +
-                             ggplot2::labs(title = "Transcription.Tes.Heatmap") +
-                             ggplot2::theme_minimal() + ggplot2::theme(
-                               plot.subtitle = ggplot2::element_blank(),
-                               plot.caption = ggplot2::element_blank(),
-                               legend.title = ggplot2::element_blank(),
-                               axis.title.x = ggplot2::element_blank(),
-                               axis.title.y = ggplot2::element_blank(),
-                               panel.grid.major = ggplot2::element_blank(),
-                               panel.grid.minor = ggplot2::element_blank(),
-                               plot.margin = ggplot2::unit(c(5.5, 14, 5.5, 14), "points"),
-                               plot.title = ggplot2::element_text(hjust = 0.5)
-                             ))
-    plot_list <- list(p1, p2, p3, p4)
-    return(plot_list)
-  }
+RNAmeta_transcription_export <- function(data, file, set_group_name = NULL, heatmap_sample = "all", width = 1180, height = NULL, aspect_ratio = c(1180, 560), scale = 2, panel = "all") {
+  .rnameta_site_profile_export(data, file, set_group_name, "Transcription", width, height, aspect_ratio, scale, heatmap_sample, panel)
 }

@@ -2,28 +2,25 @@
 % Please edit documentation in R/RNAmeta_peak_gene_size_plot.R
 \name{RNAmeta_peak_gene_size_plot}
 \alias{RNAmeta_peak_gene_size_plot}
-\title{RNA Meta Peak Gene Size Plot}
+\title{Plot transcript lengths for peak-associated genes}
 \usage{
 RNAmeta_peak_gene_size_plot(
   preliminary_analysis_data = NULL,
-  set_group_name = NULL
+  set_group_name = NULL,
+  width = NULL,
+  height = NULL
 )
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing the preliminary analysis data. It should include the transcript length (\code{tx_len}) information extracted from the dataset.}
+\item{preliminary_analysis_data}{Preliminary analysis output or prepared transcript table.}
 
-\item{set_group_name}{A vector of user-defined group names to rename the sample groups in the dataset.
-The length of \code{set_group_name} must match the number of unique \code{Sample} values in the data.}
+\item{set_group_name}{Optional replacement sample labels.}
+
+\item{width, height}{Optional widget dimensions.}
 }
 \value{
-A \code{ggplot} object representing a box plot of transcript lengths (\code{tx_len}) across different sample groups.
-\itemize{
-\item The x-axis represents different sample groups.
-\item The y-axis represents transcript length in log2 scale (\verb{log2(txLength bp)}).
-\item The box plot shows the distribution of transcript lengths within each sample group.
-\item The legend placement is determined based on the number of unique samples.
-}
+An htmlwidget.
 }
 \description{
-RNA Meta Peak Gene Size Plot
+Plot transcript lengths for peak-associated genes
 }

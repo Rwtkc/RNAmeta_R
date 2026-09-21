@@ -25,6 +25,7 @@
                                tx_cds_min_length = NULL,
                                tx_three_utr_min_length = NULL,
                                tx_long_ncrna_min_length = NULL,
+                               tx_lncrna_overlap_mrna = TRUE,
                                tx_promoter_length = NULL,
                                tx_tail_length = NULL,
                                tx_ambiguity = NULL,
@@ -37,7 +38,7 @@
   tx_lengths <- GenomicFeatures::transcriptLengths(txdb_file)
   print(paste("There are", length(tx_lengths$tx_id), "transcripts of", length(unique(tx_lengths$gene_id)), "genes in the genome."))
   if (tx_primary_only){
-    res <- rtracklayer::as.data.frame(tx_lengths %>% group_by(gene_id) %>% filter("tx_len" == max("tx_len")))
+    res <- rtracklayer::as.data.frame(tx_lengths %>% group_by(gene_id) %>% filter(tx_len == max(tx_len)))
     name_filter_tx <- res$tx_name
     print(paste("There are", length(name_filter_tx), "primary transcripts of", length(unique(res$gene_id)), "genes in the genome."))
   }else{
@@ -75,7 +76,7 @@
   ncRNA_name <- dplyr::setdiff(name_filter_tx, all_mRNA)
   ncRNA <- tx[ncRNA_name]
   ncrna_overlap_mrna <- GenomicRanges::countOverlaps(ncRNA, tx[name_filter_mRNA])
-  names_overlap_ncrna <- names(ncRNA[ncrna_overlap_mrna < 1])
+  names_overlap_ncrna <- if (isTRUE(tx_lncrna_overlap_mrna)) names(ncRNA) else names(ncRNA[ncrna_overlap_mrna < 1])
   ncRNA_flag <-
     (sum(width(ncRNA)) > tx_long_ncrna_min_length)
   names_flag_ncRNA <- names(ncRNA)[ncRNA_flag]
@@ -251,6 +252,7 @@
                               tx_cds_min_length = tx_cds_min_length,
                               tx_three_utr_min_length = tx_three_utr_min_length,
                               tx_long_ncrna_min_length = tx_long_ncrna_min_length,
+                              tx_lncrna_overlap_mrna = TRUE,
                               tx_promoter_length = tx_promoter_length,
                               tx_tail_length = tx_tail_length,
                               tx_ambiguity = tx_ambiguity,
@@ -266,6 +268,7 @@
                                      tx_cds_min_length = tx_cds_min_length,
                                      tx_three_utr_min_length = tx_three_utr_min_length,
                                      tx_long_ncrna_min_length = tx_long_ncrna_min_length,
+                                     tx_lncrna_overlap_mrna = tx_lncrna_overlap_mrna,
                                      tx_promoter_length = tx_promoter_length,
                                      tx_tail_length = tx_tail_length,
                                      tx_ambiguity = tx_ambiguity,
@@ -282,6 +285,7 @@
                              tx_cds_min_length = NULL,
                              tx_three_utr_min_length = NULL,
                              tx_long_ncrna_min_length = NULL,
+                             tx_lncrna_overlap_mrna = TRUE,
                              tx_promoter_length = NULL,
                              tx_tail_length = NULL,
                              tx_ambiguity = NULL,
@@ -297,6 +301,7 @@
                                    tx_cds_min_length = tx_cds_min_length,
                                    tx_three_utr_min_length = tx_three_utr_min_length,
                                    tx_long_ncrna_min_length = tx_long_ncrna_min_length,
+                                   tx_lncrna_overlap_mrna = tx_lncrna_overlap_mrna,
                                    tx_promoter_length = tx_promoter_length,
                                    tx_tail_length = tx_tail_length,
                                    tx_ambiguity = tx_ambiguity,
@@ -375,10 +380,11 @@
     tx_coord_filtered_width <- rtracklayer::width(tx_coord_filtered)
     tx_coord_filtered <- tx_coord_filtered[tx_coord_filtered_width == x_widthes[tx_coord_filtered$x_hits]]
   }
-  idx <- GenomicRanges:::get_out_of_bound_index(tx_coord_filtered)
-  if (length(idx) != 0) {
-    tx_coord_filtered <- tx_coord_filtered[-idx]
-  }
+  sequence_lengths <- GenomeInfoDb::seqlengths(tx_coord_filtered)
+  range_limits <- unname(sequence_lengths[as.character(GenomeInfoDb::seqnames(tx_coord_filtered))])
+  idx <- which(IRanges::start(tx_coord_filtered) < 1L |
+                 (!is.na(range_limits) & IRanges::end(tx_coord_filtered) > range_limits))
+  if (length(idx)) tx_coord_filtered <- tx_coord_filtered[-idx]
   return(tx_coord_filtered)
 }
 
@@ -438,6 +444,7 @@
 
 .normalize <- function(sites_GRanges = NULL, guitar_txdb = NULL, tx_type = NULL, overlap_index = NULL, site_length_index = NULL)
 {
+  if (is.null(sites_GRanges[[tx_type]]) || !length(sites_GRanges[[tx_type]])) return(list(numeric(), numeric()))
   sites_information <- data.frame()
 
   sites_points_position_normalize <- list()
@@ -448,7 +455,8 @@
 
   names(sites_points_position_tx) <- SummarizedExperiment::seqnames(sites_GRanges[[tx_type]])
   #step 1
-  start_point_mat <- guitar_txdb[[tx_type]]$start_point[names(sites_points_position_tx), ]
+  start_point_mat <- guitar_txdb[[tx_type]]$start_point[names(sites_points_position_tx), , drop = FALSE]
+  if (!nrow(start_point_mat) || !ncol(start_point_mat)) return(list(numeric(), numeric()))
   start_point_differ <- start_point_mat - sites_points_position_tx
   max_which <- function(x)
   {
@@ -468,13 +476,13 @@
   # step 5
   sites_points_componet_start_pct <- guitar_txdb[[tx_type]]$component_start_average_pct[sites_points_componet]
   # step 6
-  component_width_mat <- guitar_txdb[[tx_type]]$component_width[names(sites_points_position_tx), ]
+  component_width_mat <- guitar_txdb[[tx_type]]$component_width[names(sites_points_position_tx), , drop = FALSE]
   sites_points_componet_width <- component_width_mat[cbind(seq_along(sites_points_componet), sites_points_componet)]
   # step 7
   sites_points_position_normalize <- sites_points_position_componet / sites_points_componet_width * sites_points_componet_width_avg + sites_points_componet_start_pct
   names(sites_points_position_normalize) <- sites_GRanges[[tx_type]]$x_hits
   #step 8
-  sites_componet_pct <- guitar_txdb[[tx_type]]$component_width_ptc[names(sites_points_componet),]
+  sites_componet_pct <- guitar_txdb[[tx_type]]$component_width_ptc[names(sites_points_componet), , drop = FALSE]
   sites_points_componet_pct <- unlist(lapply( 1:length(sites_points_componet), component_which, sites_componet_pct, sites_points_componet))
   sites_points_weight <-  sites_points_componet_width_avg / (sites_GRanges[[tx_type]]$points_overlap_tx ^ overlap_index)/ sites_points_componet_pct * (sites_GRanges[[tx_type]]$sites_length ^ site_length_index)
   names(sites_points_weight) <- sites_GRanges[[tx_type]]$x_hits
@@ -486,52 +494,45 @@
     sites_point_weight = NULL,
     confidence_interval_resampling_time = NULL,
     adjustment_factor = NULL,
-    enable_confidence_interval = enable_confidence_interval,
-    confidence_interval_range = c(0.025,0.975))
-{
-  density_data_frame <- data.frame()
+    enable_confidence_interval = FALSE,
+    confidence_interval_range = c(0.025, 0.975)) {
+  density_rows <- list()
   for (group_name in names(sites_points_relative)) {
-    sites_point_weight[[group_name]] <- na.omit(sites_point_weight[[group_name]])
-    sites_points_relative[[group_name]] <- na.omit(sites_points_relative[[group_name]])
-    sites_weight <- sites_point_weight[[group_name]] / sum(sites_point_weight[[group_name]])
-    site_id <- sites_points_relative[[group_name]]
-    fit1 <- suppressWarnings(density(site_id, adjustment_factor = adjustment_factor, from = 0, to = 1, n = 256, weight = sites_weight))
-
-
-    tmp <-  data.frame(
-      x = fit1$x,
-      density = fit1$y / (sum(diff(fit1$x) * (head(fit1$y, -1) + tail(fit1$y, -1))) / 2),
-      group = rep(group_name, times = length(density))
-    )
-
-    if (enable_confidence_interval)
-    {
-      point_ind <- seq(1, length(site_id))
-      names(point_ind) <- names(site_id)
-      point_ind_grouped <- split(point_ind, names(point_ind))
-      fit2 <- replicate(
-        confidence_interval_resampling_time,
-        {
-          point_ind_grouped_resampled <- sample(names(point_ind_grouped), replace = TRUE)
-          point_ind_resampled <- unlist(point_ind_grouped[point_ind_grouped_resampled])
-          site_sampled_id <- site_id[point_ind_resampled];
-          weight_sapmpled <-sites_weight[point_ind_resampled];
-          suppressWarnings(density(site_sampled_id, adjustment_factor = adjustment_factor,from = 0, to = 1,n = 256,weight = weight_sapmpled)$y)
-        }
-      )
-
-      fit3 <- apply(fit2, 1, quantile, confidence_interval_range)
-
-      tmp$confidence_down <- fit3[1, ]
-      tmp$confidence_up <- fit3[2, ]
+    site_id <- as.numeric(sites_points_relative[[group_name]])
+    weights <- as.numeric(sites_point_weight[[group_name]])
+    keep <- is.finite(site_id) & is.finite(weights) & weights > 0
+    site_id <- site_id[keep]; weights <- weights[keep]
+    if (!length(site_id)) next
+    original_names <- names(sites_points_relative[[group_name]])
+    point_names <- if (is.null(original_names)) character() else original_names[keep]
+    if (length(site_id) == 1L) {
+      epsilon <- 1e-6
+      site_id <- c(site_id - epsilon, site_id + epsilon)
+      weights <- c(weights, weights)
+      point_names <- rep(if (length(point_names)) point_names[[1L]] else "1", 2L)
     }
-
-    density_data_frame <- rbind(density_data_frame, tmp)
+    weights <- weights / sum(weights)
+    fit1 <- suppressWarnings(stats::density(site_id, adjust = adjustment_factor, from = 0, to = 1, n = 256, weights = weights))
+    area <- sum(diff(fit1$x) * (head(fit1$y, -1) + tail(fit1$y, -1))) / 2
+    tmp <- data.frame(x = fit1$x, density = if (is.finite(area) && area > 0) fit1$y / area else fit1$y,
+                      group = rep(group_name, length(fit1$x)))
+    if (isTRUE(enable_confidence_interval)) {
+      if (length(point_names) != length(site_id) || any(!nzchar(point_names))) point_names <- as.character(seq_along(site_id))
+      grouped <- split(seq_along(site_id), point_names)
+      fit2 <- replicate(confidence_interval_resampling_time, {
+        sampled_groups <- sample(names(grouped), replace = TRUE)
+        sampled <- unlist(grouped[sampled_groups], use.names = FALSE)
+        sampled_weights <- weights[sampled]; sampled_weights <- sampled_weights / sum(sampled_weights)
+        suppressWarnings(stats::density(site_id[sampled], adjust = adjustment_factor, from = 0, to = 1, n = 256, weights = sampled_weights)$y)
+      })
+      fit3 <- apply(fit2, 1, stats::quantile, confidence_interval_range)
+      tmp$confidence_down <- fit3[1, ]; tmp$confidence_up <- fit3[2, ]
+    }
+    density_rows[[length(density_rows) + 1L]] <- tmp
   }
-
-  return(density_data_frame)
+  if (!length(density_rows)) return(data.frame(x = numeric(), density = numeric(), group = character()))
+  data.table::rbindlist(density_rows, use.names = TRUE, fill = TRUE)
 }
-
 .generate_pos_para <- function(peak)
 {
   pos <- list()
@@ -546,249 +547,4 @@
   pos$rna_lgd_h_flank <- 0.002 * peak
 
   return(pos)
-}
-
-.RNA_plot_structure <- function(p = NULL, component_width = NULL, head_or_tail = NULL, pos = NULL, tx_promoter_length = NULL, tx_tail_length = NULL)
-{
-  component_structure <- data.frame(width = component_width)
-  component_structure$end <- cumsum(component_width)
-  component_structure$start <- c(0, component_structure$end[seq_len(length(component_width) - 1)]) + 0.001
-  component_structure$mid <- (component_structure$start + component_structure$end) / 2
-  component_structure$width <- component_width
-  component_structure$comp <- names(component_width)
-  component_structure$label <- names(component_width)
-  if (head_or_tail)
-  {
-    component_structure$label[component_structure$comp == "promoter"] <- paste("Promoter(", tx_promoter_length / 1000, "kb)", sep = "")
-  } else {
-    component_structure$label[component_structure$comp == "promoter"] <- NA
-  }
-  component_structure$label[component_structure$comp == "utr5"] <- "5'UTR"
-  component_structure$label[component_structure$comp == "cds"] <- "CDS"
-  component_structure$label[component_structure$comp == "utr5"] <- "5'UTR"
-  component_structure$label[component_structure$comp == "ncRNA"] <- "ncRNA"
-  component_structure$label[component_structure$comp == "rna"] <- "RNA"
-  component_structure$label[component_structure$comp == "utr3"] <- "3'UTR"
-  if (head_or_tail)
-  {
-    component_structure$label[component_structure$comp == "tail"] <-  paste("Tail(", tx_tail_length / 1000, "kb)",sep = "")
-  } else {
-    component_structure$label[component_structure$comp == "tail"] <-  NA
-  }
-  component_structure$alpha <- 0.99
-  component_structure$alpha[component_structure$comp == "cds"] <- 0.272
-  component_structure$alpha[component_structure$comp == "ncRNA"] <- 0.2
-  component_structure$alpha[component_structure$comp == "rna"] <- 0.2
-  component_structure$lgd_height <- pos$rna_lgd_h_flank
-  component_structure$lgd_height[component_structure$comp == "cds"] <- pos$rna_lgd_h_cds
-  component_structure$lgd_height[component_structure$comp == "ncRNA"] <- pos$rna_lgd_h_ncrna
-  component_structure$lgd_height[component_structure$comp == "rna"] <- pos$rna_lgd_h_rna
-  component_structure$lgd_height[component_structure$comp == "utr5"] <- pos$rna_lgd_h_utr
-  component_structure$lgd_height[component_structure$comp == "utr3"] <- pos$rna_lgd_h_utr
-
-  for (comp in component_structure$comp) {
-    x = component_structure[comp, "mid"]
-    y = pos$rna_comp_text
-    label = component_structure[comp, "label"]
-    p <- p + ggplot2::annotate("text", x = x, y = y, label = label)
-
-    xmin = component_structure[comp, "start"]
-    xmax = component_structure[comp, "end"]
-    ymin = pos$rna_lgd_bl - component_structure[comp, "lgd_height"]
-    ymax = pos$rna_lgd_bl + component_structure[comp, "lgd_height"]
-    alpha = component_structure[comp, "alpha"]
-    p <- p + ggplot2::annotate("rect", xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, alpha = alpha, colour = "black")
-
-    xmin = component_structure[comp, "start"]
-    xmax = component_structure[comp, "end"]
-    ymin = pos$rna_lgd_bl - component_structure[comp, "lgd_height"]
-    ymax = pos$rna_lgd_bl + component_structure[comp, "lgd_height"]
-    alpha = component_structure[comp, "alpha"]
-    p <- p + annotate("rect", xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, alpha = alpha, colour = "black")
-  }
-
-  if (nrow(component_structure) > 1) {
-    vline_pos <- data.frame(
-      x1 = component_structure[seq_len(nrow(component_structure) -1), "end"],
-      x2 = component_structure[seq_len(nrow(component_structure) -1), "end"],
-      y1 = rep(pos$fig_top, 4),
-      y2 = rep(pos$rna_lgd_bl, 4)
-    )
-    p <- p + suppressWarnings(
-      ggplot2::geom_segment(
-        ggplot2::aes(x = x1, y = y1, xend = x2, yend = y2),
-        linetype = "dotted", size = 1, data = vline_pos
-      )
-    )
-
-  }
-
-
-  return(p)
-}
-
-.plot_density_confidence_interval <- function(density_data_frame_confidence_interval = NULL,
-                                              component_width = NULL,
-                                              head_or_tail = NULL,
-                                              title = NULL,
-                                              enable_confidence_interval = NULL,
-                                              tx_type = NULL,
-                                              tx_promoter_length = NULL,
-                                              tx_tail_length = NULL)
-{
-  if (enable_confidence_interval) {
-    peak <- max(density_data_frame_confidence_interval$confidence_up)
-  } else {
-    peak <- max(density_data_frame_confidence_interval$density)
-  }
-  pos <- .generate_pos_para(peak)
-
-  samples <- factor(density_data_frame_confidence_interval$group)
-  p <- suppressWarnings(ggplot2::ggplot(density_data_frame_confidence_interval, ggplot2::aes(x = x)))
-  p <- p + ggplot2::geom_line(ggplot2::aes(y = density, colour = samples), alpha = 1, size = 1)
-  p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = rep(0, length(density)), ymax = density, colour = samples, fill = samples), alpha = 0.2 )
-  if (enable_confidence_interval) {
-    p <- p + ggplot2::geom_line(ggplot2::aes(y = density_data_frame_confidence_interval$confidence_down, colour = samples), colour="blue", alpha = 0.4, size = 0.5)
-    p <- p + ggplot2::geom_line(ggplot2::aes(y = density_data_frame_confidence_interval$confidence_up, colour = samples), colour="black", alpha = 0.4, size = 0.5)
-    p <- p + ggplot2::geom_ribbon(ggplot2::aes(ymin = density_data_frame_confidence_interval$confidence_down, ymax = density_data_frame_confidence_interval$confidence_up, colour = samples, fill = samples), alpha = 0.2, colour = NA)
-  }
-
-  if (tx_type == "tx"){
-    p <- p + ggplot2::labs(title = paste("Distribution on exon")) +
-      ggplot2::theme(plot.title = ggplot2::element_text(face = "bold",
-                                                        margin = margin(10, 0, 10, 0),
-                                                        size = 14))
-  }
-  if (tx_type == "mRNA"){
-    p <- p + ggplot2::labs(title = paste("Distribution on mRNA")) +
-      ggplot2::theme(plot.title = ggplot2::element_text(face = "bold",
-                                                        margin = margin(10, 0, 10, 0),
-                                                        size = 14))
-  }
-  if (tx_type == "ncRNA"){
-    p <- p + ggplot2::labs(title = paste("Distribution on ncRNA")) +
-      ggplot2::theme(plot.title = ggplot2::element_text(face = "bold",
-                                                        margin = ggplot2::margin(10, 0, 10, 0),
-                                                        size = 14))
-  }
-  p <- p + ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(),
-                          axis.title.x = ggplot2::element_blank())
-  p <- p + ggplot2::ylab("Frequency")
-  p <- p + ggplot2::theme(axis.title.y = ggplot2::element_text(vjust = 2, size = 14,face = "bold"))
-  p <- p + ggplot2::theme(panel.grid = ggplot2::element_blank(),axis.text.y = ggplot2::element_text(size = 13))
-  p <- p + ggplot2::theme(panel.grid.minor = element_blank(),panel.grid.major = ggplot2::element_line(color = "white", size = .7))
-  p <- p + ggplot2::theme(panel.border = ggplot2::element_rect(colour = "#4c4c4c", fill = NA, size = 0.8))
-
-
-  p <- .RNA_plot_structure(p = p, component_width = component_width, head_or_tail = head_or_tail, pos = pos, tx_promoter_length = tx_promoter_length, tx_tail_length = tx_tail_length)
-
-  p <- p + ggplot2::theme(legend.position = "bottom") + ggplot2::theme(legend.text = ggplot2::element_text(size = 13))
-  p <- p + ggplot2::theme(legend.title = ggplot2::element_blank())
-  p <- p + ggplot2::scale_y_continuous(limits = c(pos$fig_bottom, pos$fig_top),
-                                       expand = c(0, 0))
-
-  return(p)
-}
-
-.txdb_file_test <- function(txdb_file = NULL){
-  print("Checking txdb_file begins.")
-  if (!grepl("\\.sqlite$", txdb_file)) {
-    stop("The file extension of txdb_file must be '.sqlite'")
-  }
-  txdb_sql <- DBI::dbConnect(RSQLite::SQLite(), dbname = txdb_file)
-  if (!"chrominfo" %in% DBI::dbListTables(txdb_sql)) {
-    DBI::dbDisconnect(txdb_sql)
-    stop("This database file does not meet the query specifications: 'chrominfo' table is missing.")
-  }
-  chrom_info <- data.table::as.data.table(DBI::dbGetQuery(txdb_sql, "SELECT * FROM chrominfo"))
-  if(is.null(chrom_info)){
-    DBI::dbDisconnect(txdb_sql)
-    stop("This database file does not meet the query specifications: 'chrominfo' table is null.")
-  }
-  DBI::dbDisconnect(txdb_sql)
-  print("txdb_file check passed.")
-  return(chrom_info)
-}
-
-.bed_file_test_for_gene_meta <- function(bed_file = NULL, chrom_info = NULL, set_group_name_length = NULL) {
-  print("Checking bed_file begins.")
-  if(set_group_name_length != length(bed_file)){
-    stop(paste("Error: The number of 'bed files' is", length(bed_file),
-               "but the number of 'group names' is", set_group_name_length,
-               ". The numbers are not equal."))
-  }
-  if (length(bed_file) > 2 && !is.list(bed_file)) {
-    stop("Error: If there are multiple bed_files, please use a list() to combine them.")
-  }
-
-  modified_bed_files <- list()
-
-  for (i in 1:length(bed_file)) {
-    current_bed_file <- bed_file[[i]]
-    if (tools::file_ext(current_bed_file) != "bed") {
-      stop(paste("The file", current_bed_file, "is not in .bed format"))
-    }
-    first_line <- readLines(current_bed_file, n = 1)
-    first_five_lines <- readLines(current_bed_file, n = 5)
-    possible_delimiters <- c("\t", " ", ",")
-    detected_delimiter <- NULL
-    for (delimiter in possible_delimiters) {
-      split_counts <- sapply(first_five_lines, function(line) length(unlist(strsplit(line, delimiter))))
-      if (length(unique(split_counts)) == 1) {
-        detected_delimiter <- delimiter
-        break
-      }
-    }
-    if (is.null(detected_delimiter)) {
-      stop(paste("Unable to detect the delimiter in the BED file", current_bed_file, ". Please check the file format."))
-    }
-    first_line <- first_five_lines[1]
-    first_line <- unlist(strsplit(first_line, detected_delimiter))
-    is_header <- suppressWarnings(all(is.na(as.numeric(first_line))))
-    if (is_header) {
-      warning(paste("This file", current_bed_file, "contains column names. We have removed the column names. Please use a BED file without column names."))
-      bed_data <- read.table(current_bed_file, header = FALSE, stringsAsFactors = FALSE, skip = 1)
-    } else {
-      bed_data <- read.table(current_bed_file, header = FALSE, stringsAsFactors = FALSE)
-    }
-    if (any(!grepl("^\\d+$", bed_data$V2))) {
-      non_numeric_rows <- which(!grepl("^\\d+$", bed_data$V2))
-      stop(paste("The second column has non-numeric values in", current_bed_file, "error at row(s):", paste(non_numeric_rows, collapse = ", ")))
-    }
-    if (any(!grepl("^\\d+$", bed_data$V3))) {
-      non_numeric_rows <- which(!grepl("^\\d+$", bed_data$V3))
-      stop(paste("The third column has non-numeric values in", current_bed_file, "error at row(s):", paste(non_numeric_rows, collapse = ", ")))
-    }
-    if (any(bed_data$V3 <= bed_data$V2)) {
-      invalid_rows <- which(bed_data$V3 <= bed_data$V2)
-      stop(paste("The third column is not greater than the second column in", current_bed_file, "error at row(s):", paste(invalid_rows, collapse = ", ")))
-    }
-    bed_chroms <- unique(bed_data$V1)
-    chrom_info_chroms <- unique(chrom_info$chrom)
-    missing_chroms <- setdiff(bed_chroms, chrom_info_chroms)
-    if (length(missing_chroms) > 0) {
-      stop(paste("The following chromosomes in", current_bed_file, "are not present in chrom_info:", paste(missing_chroms, collapse = ", ")))
-    }
-    bed_data <- data.table::as.data.table(bed_data)
-    if (ncol(bed_data) == 3) {
-      bed_data[, V4 := paste0("site", .I)]
-      bed_data[, V5 := "."]
-      bed_data[, V6 := "*"]
-    } else if (ncol(bed_data) == 4) {
-      bed_data[, V5 := "."]
-      bed_data[, V6 := "*"]
-    } else if (ncol(bed_data) == 5) {
-      bed_data[, V6 := "*"]
-    }
-    suppressWarnings(if (sum(!is.na(as.numeric(bed_data[[5]]))) > sum(sapply(bed_data[, -5, with = FALSE], function(col) sum(is.na(as.numeric(col)))))) {
-      bed_data <- bed_data[!is.na(as.numeric(bed_data[[5]])), ]
-    })
-    bed_data <- bed_data[, 1:6, with = FALSE]
-    temp_bed_file <- tempfile(pattern = "modified_", fileext = ".bed")
-    write.table(bed_data, temp_bed_file, sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
-    modified_bed_files[[i]] <- temp_bed_file
-  }
-
-  print("bed_file check passed.")
-  return(modified_bed_files)
 }

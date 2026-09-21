@@ -1,58 +1,46 @@
-#' @title RNAmeta_peak_exon_size_plot
-#' @param preliminary_analysis_data A list of data containing the peak exon size information, where each element is a list containing data for a particular analysis.
-#'        The first level of the list should contain the data, and each item should include a second level with a `Sample` and `length` column.
-#' @param set_group_name A vector of custom group names to replace the original sample names in the plot. The length of this vector must match the number of unique sample groups in the data.
-#'        If `NULL`, the original sample names are used.
-#' @returns A `ggplot` object that displays a boxplot of exon sizes (log2 scale) across samples, with facets by exon location.
-#'          The boxplot colors correspond to the sample groups, and the plot includes a legend if more than one unique sample group is present.
-#' @export
-RNAmeta_peak_exon_size_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL){
-  total_all_sites <- NULL
-  for(i in 1:length(preliminary_analysis_data[[1]])){
-    cct <- NULL
-    all_sites <- NULL
-    cct <- preliminary_analysis_data[[1]][[i]]
-    cct2 = cct[[2]]
-    all_sites <- data.table::as.data.table(cct2)
-    all_sites[,group := IRanges::gsub("_.*", "", Sample)]
-    all_sites[,Sample := IRanges::gsub(".*_", "", Sample)]
-    total_all_sites <- IRanges::rbind(total_all_sites, all_sites)
-  }
-  if(is.null(set_group_name)){} else {
-    original_group_names <- IRanges::unique(total_all_sites$Sample)
-    if (length(set_group_name) != length(original_group_names)) {
-      stop(paste("The number of user-defined group names does not match the number of groups in the data.",
-                 "Length of set_group_name:", length(set_group_name),
-                 "Length of original_group_names:", length(original_group_names)))
-    }
-    group_mapping <- stats::setNames(set_group_name, original_group_names)
-    total_all_sites$Sample <- dplyr::recode(total_all_sites$Sample, !!!group_mapping)
-  }
+.rnameta_peak_exon_size_table <- function(data, set_group_name = NULL) {
+  result <- .rnameta_preliminary_component(data, 2L, c("Sample", "exonLoc", "length"))
+  result <- .rnameta_clean_sample_names(result)
+  result[, length := suppressWarnings(as.numeric(length))]
+  result <- result[is.finite(length) & length > 0 & as.character(exonLoc) %in% c("First", "Middle", "Last")]
+  result <- .rnameta_rename_samples(result, set_group_name)
+  result[, exonLoc := factor(as.character(exonLoc), levels = c("First", "Middle", "Last"))]
+  result
+}
 
-  if(length(IRanges::unique(total_all_sites$Sample)) > 1){
-    legend_position <- "top"
-  } else {
-    legend_position <- "none"
-  }
-  p <- ggpubr::ggboxplot(total_all_sites, x = 'Sample', y = 'length', color = 'Sample',
-                  facet.by = "exonLoc", yscale = "log2", width = 0.3) +
-    ggplot2::scale_fill_manual(values = c("#4e62ab", "#469db4", "#87d0a8", "#ff5733", "#33ff57", "#ff33a8")) +
-    ggplot2::labs(x = "", y = "log2(Length)(bp)") +
-    ggplot2::theme(
-      legend.position = legend_position,
-      legend.title = ggplot2::element_blank(),
-      axis.line.y = ggplot2::element_blank(),
-      axis.ticks.y = ggplot2::element_blank(),
-      axis.ticks.x = ggplot2::element_blank(),
-      axis.title.x = ggplot2::element_blank(),
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank(),
-      text = ggplot2::element_text(size = 10, colour = "#333333"),
-      axis.text.y = ggplot2::element_text(vjust = 0.5),
-      axis.text.x = ggplot2::element_text(size = 10, hjust = 0.5, margin = ggplot2::margin(t = 6)),
-      axis.title.y = ggplot2::element_text(size = 10)
-    ) +
-    ggplot2::scale_y_continuous(trans = 'log2', breaks = scales::trans_breaks('log2', function(x) 2 ^ x)) +
-    ggplot2::facet_wrap(~exonLoc, scales = 'free_x')
-  return(p)
+.rnameta_peak_exon_size_payload <- function(data, set_group_name = NULL) {
+  table <- .rnameta_peak_exon_size_table(data, set_group_name)
+  samples <- unique(as.character(table$Sample)); colors <- .rnameta_chart_palette()
+  locations <- c("First", "Middle", "Last"); locations <- locations[locations %in% as.character(table$exonLoc)]
+  list(type = "faceted_boxplot", title = "Peak Exon Size", yLabel = "Exon length (bp)", scaleTransform = "log2",
+       facets = lapply(locations, function(location) list(name = location, groups = lapply(seq_along(samples), function(i) {
+         values <- table[Sample == samples[[i]] & as.character(exonLoc) == location, length]
+         list(name = samples[[i]], originalName = samples[[i]], color = colors[((i - 1L) %% length(colors)) + 1L], values = unname(values))
+       }))))
+}
+
+#' Plot exon lengths by exon position
+#' @param preliminary_analysis_data Preliminary analysis output or prepared exon table.
+#' @param set_group_name Optional replacement sample labels.
+#' @param width,height Optional widget dimensions.
+#' @return An htmlwidget.
+#' @export
+RNAmeta_peak_exon_size_plot <- function(preliminary_analysis_data = NULL, set_group_name = NULL,
+                                         width = NULL, height = NULL) {
+  .rnameta_chart_widget(.rnameta_peak_exon_size_payload(preliminary_analysis_data, set_group_name), width, height)
+}
+
+#' Export a peak exon size chart
+#' @param data Preliminary analysis output or prepared exon table.
+#' @param file PNG or PDF output path.
+#' @inheritParams RNAmeta_peak_exon_size_plot
+#' @param width Output width before PNG scaling.
+#' @param height Optional exact output height.
+#' @param aspect_ratio Width/height ratio used when height is NULL.
+#' @param scale PNG resolution multiplier.
+#' @return The normalized output path, invisibly.
+#' @export
+RNAmeta_peak_exon_size_export <- function(data, file, set_group_name = NULL, width = 1180,
+                                          height = NULL, aspect_ratio = c(1180, 560), scale = 2) {
+  .rnameta_chart_export(.rnameta_peak_exon_size_payload(data, set_group_name), file, width, height, aspect_ratio, scale)
 }

@@ -2,25 +2,37 @@
 % Please edit documentation in R/RNAmeta_gene_type_plot.R
 \name{RNAmeta_gene_type_plot}
 \alias{RNAmeta_gene_type_plot}
-\title{Gene Type Plot}
+\title{Gene Type plot}
 \usage{
-RNAmeta_gene_type_plot(preliminary_analysis_data = NULL, set_group_name = NULL)
+RNAmeta_gene_type_plot(
+  preliminary_analysis_data = NULL,
+  set_group_name = NULL,
+  show_labels = TRUE,
+  animate = TRUE,
+  width = NULL,
+  height = 560,
+  elementId = NULL
+)
 }
 \arguments{
-\item{preliminary_analysis_data}{A list containing the preliminary analysis data. This typically includes genomic ranges, GFF file, and other results.
-\itemize{
-\item The second element should be genomic ranges (\code{peak_gr}).
-\item The third element should be a GFF file (\code{gff_file}).
-}}
+\item{preliminary_analysis_data}{A legacy preliminary analysis list, or the
+counts table returned by \code{RNAmeta_gene_type_data()}.}
 
-\item{set_group_name}{A vector of user-defined group names to map to the unique \code{Sample} identifiers in the \code{all_sites} data.
-The length of \code{set_group_name} must match the number of unique \code{Sample} values in the data.}
+\item{set_group_name}{Optional replacement labels in current sample order.}
+
+\item{show_labels}{Display count labels above bars.}
+
+\item{animate}{Animate bars when rendered.}
+
+\item{width, height}{Widget dimensions.}
+
+\item{elementId}{Optional HTML element id.}
 }
 \value{
-A \code{ggplot} object representing a bar plot of gene types in the dataset. The plot shows the count of each gene type across samples,
-with bars colored based on the sample groups. The labels indicate the count values, and the position of the legend depends on the number
-of unique samples (if more than one group is present, the legend is shown).
+An interactive htmlwidget.
 }
 \description{
-Gene Type Plot
+Render Gene Type counts as the interactive RNAmeta grouped-bar widget.
+The returned object works in RStudio Viewer, R Markdown, Quarto and Shiny.
+On headless systems use \code{RNAmeta_gene_type_export()} instead of relying on a Viewer.
 }

@@ -1,38 +1,64 @@
 <div align="center">
 
 <pre>
- ____  _   _    _    __  __      _
-|  _ \| \ | |  / \  |  \/  | ___| |_ __ _
-| |_) |  \| | / _ \ | |\/| |/ _ \ __/ _` |
-|  _ <| |\  |/ ___ \| |  | |  __/ || (_| |
-|_| \_\_| \_/_/   \_\_|  |_|\___|\__\__,_|
-                   v0.2.0
+██████╗ ███╗   ██╗ █████╗ ███╗   ███╗███████╗████████╗ █████╗
+██╔══██╗████╗  ██║██╔══██╗████╗ ████║██╔════╝╚══██╔══╝██╔══██╗
+██████╔╝██╔██╗ ██║███████║██╔████╔██║█████╗     ██║   ███████║
+██╔══██╗██║╚██╗██║██╔══██║██║╚██╔╝██║██╔══╝     ██║   ██╔══██║
+██║  ██║██║ ╚████║██║  ██║██║ ╚═╝ ██║███████╗   ██║   ██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝
+                              v0.2.0
 </pre>
+
+<p>
+  <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-2f81f7?style=flat-square">
+  <img alt="R package" src="https://img.shields.io/badge/R-package-276DC3?style=flat-square&logo=r&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-2da44e?style=flat-square">
+  <img alt="Export" src="https://img.shields.io/badge/export-PNG%20%7C%20PDF-8250df?style=flat-square">
+</p>
 
 RNAmeta is an R package for genomic interval annotation, transcript-region
 profiling, statistical summaries, and interactive visualization.
 
-[RNAmeta-online](https://rnainformatics.cn/RNAmeta-online/) ·
-[rwtkc@foxmail.com](mailto:rwtkc@foxmail.com)
+[**RNAmeta-online**](https://rnainformatics.cn/RNAmeta-online/) ·
+[**Contact**](mailto:rwtkc@foxmail.com)
+
+[Main functions](#-main-functions) ·
+[Installation](#-installation) ·
+[Basic workflow](#-basic-workflow) ·
+[Analysis modules](#-analysis-modules) ·
+[Image export](#-image-export)
 
 </div>
 
-## Main functions
+---
 
-| Module | Purpose |
-| --- | --- |
-| Preliminary Analysis | Prepare shared peak annotations for downstream analyses |
-| Gene Type | Summarize peak-associated gene types |
-| Gene Matrix | Compare shared and sample-specific genes across 2–5 samples |
-| Peak Summary | Plot peak distribution, exon type, exon number, exon size, and gene size |
-| Transcription | Profile signals around transcription start and end sites |
-| Translation | Profile signals around translation start and stop sites |
-| Splice Site | Profile signals around donor and acceptor sites |
-| Meta Plot | Display peak distributions across transcript regions |
+<h2 align="center">✨ Main functions</h2>
 
-## Installation
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Module</th>
+      <th align="left">Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td align="center"><b>Preliminary Analysis</b></td><td>Prepare shared peak annotations for downstream analyses</td></tr>
+    <tr><td align="center"><b>Gene Type</b></td><td>Summarize peak-associated gene types</td></tr>
+    <tr><td align="center"><b>Gene Matrix</b></td><td>Compare shared and sample-specific genes across 2–5 samples</td></tr>
+    <tr><td align="center"><b>Peak Summary</b></td><td>Plot peak distribution, exon type, exon number, exon size, and gene size</td></tr>
+    <tr><td align="center"><b>Transcription</b></td><td>Profile signals around transcription start and end sites</td></tr>
+    <tr><td align="center"><b>Translation</b></td><td>Profile signals around translation start and stop sites</td></tr>
+    <tr><td align="center"><b>Splice Site</b></td><td>Profile signals around donor and acceptor sites</td></tr>
+    <tr><td align="center"><b>Meta Plot</b></td><td>Display peak distributions across transcript regions</td></tr>
+  </tbody>
+</table>
 
-Install the current version from GitHub:
+---
+
+## 📦 Installation
+
+### Install from GitHub
 
 ```r
 if (!requireNamespace("remotes", quietly = TRUE)) {
@@ -41,22 +67,22 @@ if (!requireNamespace("remotes", quietly = TRUE)) {
 remotes::install_github("Rwtkc/RNAmeta_R")
 ```
 
-Install a downloaded source package:
+### Install a downloaded source package
 
 ```r
 install.packages("RNAmeta_0.2.0.tar.gz", repos = NULL, type = "source")
 ```
 
-## Input files
+## 🧬 Input files
 
-RNAmeta reads BED files and species annotation files supplied by the user:
+| Parameter | Input |
+| --- | --- |
+| `bed_file` | One or more BED files |
+| `txdb_file` | A TxDb object or TxDb SQLite file |
+| `tx_length_file` | A transcript-length `.rda` file |
+| `gff_file` | A processed GFF `GRanges` `.rda` file |
 
-- `bed_file`: one or more BED files;
-- `txdb_file`: a TxDb object or TxDb SQLite file;
-- `tx_length_file`: a transcript-length `.rda` file;
-- `gff_file`: a processed GFF `GRanges` `.rda` file.
-
-## Basic workflow
+## 🚀 Basic workflow
 
 ```r
 library(RNAmeta)
@@ -72,10 +98,14 @@ preliminary <- RNAmeta_get_preliminary_analysis_data(
 )
 ```
 
-The `preliminary` object can be reused by Gene Matrix, Peak Summary,
-Transcription, Translation, and Splice Site modules.
+> The `preliminary` object can be reused by Gene Matrix, Peak Summary,
+> Transcription, Translation, and Splice Site modules.
 
-## Gene Type
+---
+
+## 📊 Analysis modules
+
+### Gene Type
 
 ```r
 gene_type <- RNAmeta_gene_type_data(
@@ -89,7 +119,7 @@ RNAmeta_gene_type_plot(gene_type)
 RNAmeta_gene_type_export(gene_type, "gene_type.png")
 ```
 
-## Gene Matrix
+### Gene Matrix
 
 ```r
 gene_matrix <- RNAmeta_gene_matrix_data(preliminary, labels)
@@ -97,9 +127,9 @@ RNAmeta_get_gene_matrix_plot(gene_matrix)
 RNAmeta_gene_matrix_export(gene_matrix, "gene_matrix.pdf")
 ```
 
-Gene Matrix accepts two to five samples.
+> Gene Matrix accepts two to five samples.
 
-## Peak Summary
+### Peak Summary
 
 ```r
 RNAmeta_peak_distribution_plot(preliminary, labels)
@@ -109,8 +139,6 @@ RNAmeta_peak_exon_size_plot(preliminary, labels)
 RNAmeta_peak_gene_size_plot(preliminary, labels)
 ```
 
-Export the corresponding plots with:
-
 ```r
 RNAmeta_peak_distribution_export(preliminary, "peak_distribution.png", labels)
 RNAmeta_peak_exon_type_export(preliminary, "peak_exon_type.pdf", labels)
@@ -119,10 +147,10 @@ RNAmeta_peak_exon_size_export(preliminary, "peak_exon_size.pdf", labels)
 RNAmeta_peak_gene_size_export(preliminary, "peak_gene_size.png", labels)
 ```
 
-## Transcription, Translation, and Splice Site
+### Transcription, Translation, and Splice Site
 
-Each function returns a named list of individual plots. Use `panel` to display or
-export one plot, or keep `panel = "all"` to export all plots.
+Use `panel` to display or export one plot, or keep `panel = "all"` to export all
+plots.
 
 ```r
 transcription <- get_transcription_data(preliminary, seed = 1)
@@ -144,7 +172,7 @@ splice_plots <- RNAmeta_get_splicesite_plot(preliminary, labels)
 RNAmeta_splicesite_export(preliminary, "splice_site.png", labels)
 ```
 
-## Meta Plot
+### Meta Plot
 
 ```r
 meta <- RNAmeta_meta_plot(
@@ -164,10 +192,12 @@ RNAmeta_meta_plot_export(meta, "meta_mrna.png", tx_type = "mRNA")
 RNAmeta_meta_plot_export(meta, "meta_ncrna.pdf", tx_type = "ncRNA")
 ```
 
-## Image export
+---
 
-PNG and PDF output dimensions can be controlled with `width`, `height`, and
-`aspect_ratio`. PNG output also supports `scale`.
+## 🖼️ Image export
+
+Control PNG and PDF output with `width`, `height`, and `aspect_ratio`. PNG output
+also supports `scale`.
 
 ```r
 RNAmeta_peak_distribution_export(
@@ -188,7 +218,7 @@ RNAmeta_peak_distribution_export(
 )
 ```
 
-## Cache
+## ⚡ Cache
 
 Repeated analyses reuse cached annotation and profile results. Clear a selected
 cache or all cached results when input files change:
@@ -200,6 +230,10 @@ RNAmeta_clear_cache("meta")
 RNAmeta_clear_cache("all")
 ```
 
-## License
+---
 
-RNAmeta is distributed under the GNU General Public License version 3 or later.
+<div align="center">
+
+RNAmeta is distributed under the **GNU General Public License v3.0 or later**.
+
+</div>

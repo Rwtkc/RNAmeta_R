@@ -1,20 +1,21 @@
-# RNAmeta
+<div align="center">
 
-```text
+<pre>
  ____  _   _    _    __  __      _
 |  _ \| \ | |  / \  |  \/  | ___| |_ __ _
 | |_) |  \| | / _ \ | |\/| |/ _ \ __/ _` |
 |  _ <| |\  |/ ___ \| |  | |  __/ || (_| |
 |_| \_\_| \_/_/   \_\_|  |_|\___|\__\__,_|
-```
+                   v0.2.0
+</pre>
 
 RNAmeta is an R package for genomic interval annotation, transcript-region
-profiling, statistical summaries, and interactive visualization. Figures can be
-viewed interactively or exported as PNG and PDF files.
+profiling, statistical summaries, and interactive visualization.
 
-- [RNAmeta-online](https://rnainformatics.cn/RNAmeta-online/)
-- [GitHub repository](https://github.com/Rwtkc/RNAmeta_R)
-- [rwtkc@foxmail.com](mailto:rwtkc@foxmail.com)
+[RNAmeta-online](https://rnainformatics.cn/RNAmeta-online/) ·
+[rwtkc@foxmail.com](mailto:rwtkc@foxmail.com)
+
+</div>
 
 ## Main functions
 

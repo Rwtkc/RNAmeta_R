@@ -39,7 +39,7 @@
   gene_type_features <- .rnameta_gene_type_features(gff, txdb)
   features$annotation_index <- .rnameta_build_annotation_index(features, gene_type_features)
 
-  list(txdb = txdb, txlens = txlens, gene_max_tx_lengths = gene_max_tx_lengths,
+  list(species_id = sub("\\.txdb\\.sqlite$", "", basename(txdb_file)), txdb = txdb, txlens = txlens, gene_max_tx_lengths = gene_max_tx_lengths,
        txdb_features = features, gff = gff)
 }
 

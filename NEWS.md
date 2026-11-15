@@ -1,3 +1,13 @@
+# RNAmeta 0.2.1
+
+- Aligned the 11 shared statistical and distribution modules with RNAmeta Online,
+  including transcript boundaries, strand-aware exon ranks, splice coordinates,
+  full-window heatmaps and Meta Plot mapping.
+- Enabled symmetric translation-boundary windows for the updated sce_R64
+  annotation with UTRs, while retaining compatibility with CDS-only references.
+- Corrected regional classification, transcript-length selection and sparse
+  signal handling, and refreshed analysis cache identifiers.
+
 # RNAmeta 0.2.0
 
 ## Analysis

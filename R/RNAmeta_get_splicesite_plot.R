@@ -1,15 +1,5 @@
 .rnameta_splicesite_data <- function(preliminary_analysis_data) {
-  peaks <- .rnameta_preliminary_value(preliminary_analysis_data, "peak_gr_list", 2L); exons <- .rnameta_preliminary_value(preliminary_analysis_data, "txdb_features", 7L)$exons; flank <- .rnameta_preliminary_value(preliminary_analysis_data, "short_flanking_size", 9L)
-  annotation_key <- paste("splicesite-v4", flank, .rnameta_granges_fingerprint(exons), sep = ":")
-  sample_results <- lapply(seq_along(peaks), function(i) {
-    sample_names <- names(peaks); sample_name <- if (is.null(sample_names) || !nzchar(sample_names[[i]])) paste0("Group", i) else sample_names[[i]]
-    sample_key <- paste(annotation_key, sample_name, .rnameta_granges_fingerprint(peaks[[i]]), sep = ":")
-    .rnameta_site_profile_cached(sample_key, function() {
-      query <- stats::setNames(list(peaks[[i]]), sample_name)
-      .get_eejunct_new(1L, query, exons, flank)
-    })
-  })
-  data.table::rbindlist(sample_results, use.names = TRUE, fill = TRUE)
+  .rnameta_online_profile_data(preliminary_analysis_data, "splicesite")
 }
 #' Plot splice-site profiles
 #' @param preliminary_analysis_data Preliminary analysis output or a prepared hit table.

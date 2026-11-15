@@ -460,8 +460,9 @@
                                       group_name = NULL) {
   peak_anno <- .get_genomic_annotation(peaks = peak_gr[[index]], txdb_features = txdb_features, genomic_annotation_priority = genomic_annotation_priority)
   rp <- .get_genomic_anno_stat(peak_anno = peak_anno)
-  rp1 <- .get_peak_exon_stat(peak_anno = peak_anno, tx_length_file = tx_length_file)
-  rp2 <- .get_peak_exon_size(peak_anno = peak_anno, genomic_region = txdb_features$exons)
+  exon_components <- .rnameta_online_exon_components(peak_gr[[index]], txdb_features, tx_length_file, names(peak_gr)[[index]])
+  rp1 <- exon_components$transcript
+  rp2 <- exon_components$exon
   rp3 <- .get_gene_matrix(peak_anno = peak_anno, peak_obj = peak_dt[[index]], gff_file = gff_file)
   rp6 <- data.table::data.table(index = 1:length(peak_anno$annotation_transcript), gene = peak_anno$annotation_transcript, anno = peak_anno$annotation)
   temp_dt <- data.table::copy(peak_dt[[index]])

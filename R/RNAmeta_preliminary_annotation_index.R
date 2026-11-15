@@ -23,6 +23,7 @@
       negative_group[nonempty] <- as.character(GenomicRanges::strand(gr[group_starts])) == "-"
       negative <- negative_group[group]
       rank[negative] <- total[negative] - rank[negative] + 1L
+      if (annotation_type == "ExonCDS" && "exon_rank" %in% names(S4Vectors::mcols(gr))) rank <- as.integer(gr$exon_rank)
     } else {
       group <- match(tx_name, unique(tx_name))
       rank <- ave(seq_along(gr), group, FUN = seq_along)
@@ -30,6 +31,7 @@
       total <- total_by_group[group]
       negative <- as.character(GenomicRanges::strand(gr)) == "-"
       rank[negative] <- total[negative] - rank[negative] + 1L
+      if (annotation_type == "ExonCDS" && "exon_rank" %in% names(S4Vectors::mcols(gr))) rank <- as.integer(gr$exon_rank)
     }
   }
   S4Vectors::mcols(gr) <- S4Vectors::DataFrame(
@@ -124,7 +126,7 @@
   collected <- .rnameta_annotation_vectors(peaks, annotation_index, same_strand)
   values <- collected$values; queries <- collected$queries
   annotation <- rep("Intergenic", length(peaks))
-  priority_map <- c(CDS = "CDS", `5UTR` = "five_utr", `3UTR` = "three_utr", Intron = "Intron", Transcript = "Transcript", Promoter = "Promoter")
+  priority_map <- c(CDS = "CDS", `5UTR` = "five_utr", `3UTR` = "three_utr", Intron = "Intron", Promoter = "Promoter")
   for (priority in rev(genomic_annotation_priority)) {
     type <- unname(priority_map[priority])
     if (!length(type) || is.na(type)) next

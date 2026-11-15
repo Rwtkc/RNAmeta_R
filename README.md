@@ -7,11 +7,11 @@
 ██╔══██╗██║╚██╗██║██╔══██║██║╚██╔╝██║██╔══╝     ██║   ██╔══██║
 ██║  ██║██║ ╚████║██║  ██║██║ ╚═╝ ██║███████╗   ██║   ██║  ██║
 ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝
-                              v0.2.0
+                              v0.2.1
 </pre>
 
 <p>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-2f81f7?style=flat-square">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.2.1-2f81f7?style=flat-square">
   <img alt="R package" src="https://img.shields.io/badge/R-package-276DC3?style=flat-square&logo=r&logoColor=white">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-2da44e?style=flat-square">
   <img alt="Export" src="https://img.shields.io/badge/export-PNG%20%7C%20PDF-8250df?style=flat-square">
@@ -70,7 +70,7 @@ remotes::install_github("Rwtkc/RNAmeta_R")
 ### Install a downloaded source package
 
 ```r
-install.packages("RNAmeta_0.2.0.tar.gz", repos = NULL, type = "source")
+install.packages("RNAmeta_0.2.1.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Input files

@@ -3,22 +3,7 @@
 #' @return A list containing boundary hits and one heatmap per sample.
 #' @export
 get_translation_data <- function(preliminary_analysis_data = NULL) {
-  txdb_features <- .rnameta_preliminary_value(preliminary_analysis_data, "txdb_features", 7L); peak_gr <- .rnameta_preliminary_value(preliminary_analysis_data, "peak_gr_list", 2L)
-  flank_size <- .rnameta_preliminary_value(preliminary_analysis_data, "short_flanking_size", 9L); tx_lengths <- .rnameta_preliminary_value(preliminary_analysis_data, "tx_lengths", 10L)
-  annotation_key <- paste("translation-v4", flank_size,
-                          .rnameta_granges_fingerprint(txdb_features$exons),
-                          .rnameta_object_fingerprint(tx_lengths), sep = ":")
-  sample_results <- lapply(seq_along(peak_gr), function(i) {
-    sample_names <- names(peak_gr); sample_name <- if (is.null(sample_names) || !nzchar(sample_names[[i]])) paste0("Group", i) else sample_names[[i]]
-    sample_key <- paste(annotation_key, sample_name, .rnameta_granges_fingerprint(peak_gr[[i]]), sep = ":")
-    .rnameta_site_profile_cached(sample_key, function() {
-      query <- stats::setNames(list(peak_gr[[i]]), sample_name)
-      list(coverage = .get_translation_boundary_coverage_new(1L, query, tx_lengths, txdb_features$exons, flank_size),
-           heatmap = .get_translation_boundary_heatmap(1L, query, tx_lengths, txdb_features$exons, flank_size))
-    })
-  })
-  heatmaps <- stats::setNames(lapply(sample_results, `[[`, "heatmap"), names(peak_gr))
-  list(data.table::rbindlist(lapply(sample_results, `[[`, "coverage"), use.names = TRUE, fill = TRUE), heatmaps)
+  .rnameta_online_profile_data(preliminary_analysis_data, "translation")
 }
 #' Plot translation site profiles
 #' @param translation_data Data returned by get_translation_data().

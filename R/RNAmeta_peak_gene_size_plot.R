@@ -1,5 +1,14 @@
 .rnameta_peak_gene_size_table <- function(data, set_group_name = NULL) {
-  result <- .rnameta_preliminary_component(data, 5L, c("Sample", "tx_len"))
+  shared <- attr(data, "peak_annotation", exact = TRUE)
+  if (!is.null(shared$raw_peaks)) {
+    result <- data.table::rbindlist(lapply(seq_along(shared$raw_peaks), function(i) {
+      .rnameta_online_peak_gene_size_compute_lengths(shared$raw_peaks[[i]],
+        shared$annotation_bundle$txdb_features$transcripts, shared$annotation_bundle$txlens,
+        shared$samples[[i]])
+    }), use.names = TRUE, fill = TRUE)
+  } else {
+    result <- .rnameta_preliminary_component(data, 5L, c("Sample", "tx_len"))
+  }
   result <- .rnameta_clean_sample_names(result)
   result[, tx_len := suppressWarnings(as.numeric(tx_len))]
   result <- result[is.finite(tx_len) & tx_len > 0]

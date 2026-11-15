@@ -27,7 +27,8 @@
     }
     if (!is.finite(xmin)) xmin <- min(current); if (!is.finite(xmax)) xmax <- max(current)
     if (length(unique(current)) < 2L) {
-      x <- seq(xmin, xmax, length.out = n); y <- rep(0, n); y[[which.min(abs(x - current[[1]]))]] <- 1
+      fit <- stats::density(rep(current[[1]], 2L), from = xmin, to = xmax, n = n, bw = 1)
+      x <- fit$x; y <- fit$y
     } else {
       density <- stats::density(current, from = xmin, to = xmax, n = n, adjust = 1)
       x <- density$x; y <- density$y
@@ -57,6 +58,7 @@
     x_positions <- seq_len(ncol(matrix))
   }
   list(type = "heatmap", key = key, title = title, sample = sample, sampleName = sample, rows = nrow(matrix), columns = ncol(matrix),
+       empty = nrow(matrix) == 0L,
        xMin = min(x_positions), xMax = max(x_positions), xDomain = c(min(x_positions), max(x_positions)),
        backgroundColor = "#ffffff", colorMaxQuantile = 0.92,
        values = lapply(seq_len(nrow(matrix)), function(i) unname(as.numeric(matrix[i, ]))))
